@@ -1,0 +1,139 @@
+;;;;;;;;;;;;;;;
+Keberangkatan dari sambas;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; total cost ;margin;BEP (TRIP); Fixed Cost 
+sambas;Jagoi / Seluas / Sanggau ;250; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp695.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp220.000 ; Rp1.115.000 ; Rp885.000 ;84,63116723; Rp74.898.583 
+;Ledo / Subah;120; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp333.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp105.600 ; Rp639.200 ; Rp1.110.800 ;67,42760443; Rp74.898.583 
+;Aruk / Sijang ;195; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp542.100 ; Rp200.000 ; Rp400 ; Rp80 ; Rp171.600 ; Rp913.700 ; Rp1.086.300 ;68,94834116; Rp74.898.583 
+;Galing / kartiasa / Sabok;80; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp222.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp70.400 ; Rp492.800 ; Rp1.257.200 ;59,57571031; Rp74.898.583 
+;Bengkayang;300; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp834.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp264.000 ; Rp1.298.000 ; Rp702.000 ;106,6931382; Rp74.898.583 
+;Sambas / Psr / Lumbang;40; Truk Standar ;6; Rp1.450.000 ; Rp2.780 ; Rp111.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp35.200 ; Rp346.400 ; Rp1.103.600 ;67,86750906; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;160; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp444.800 ; Rp200.000 ; Rp400 ; Rp80 ; Rp140.800 ; Rp785.600 ; Rp1.214.400 ;61,67538126; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );85; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp236.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp74.800 ; Rp511.100 ; Rp1.488.900 ;50,30464303; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;95; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp264.100 ; Rp200.000 ; Rp400 ; Rp80 ; Rp83.600 ; Rp547.700 ; Rp1.202.300 ;62,296085; Rp74.898.583 
+;Serindang / Sei kelambu;85; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp236.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp74.800 ; Rp511.100 ; Rp1.238.900 ;60,45571313; Rp74.898.583 
+;Singkawang / Selakau;170; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp472.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp149.600 ; Rp822.200 ; Rp927.800 ;80,72707803; Rp74.898.583 
+;Slk Dalam / Sepinggan;125; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp347.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp110.000 ; Rp657.500 ; Rp1.092.500 ;68,55705538; Rp74.898.583 
+;;;;;;;;;;;;;;;
+Keberangkatan dari Pemangkat;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Pemangkat;Jagoi / Seluas / Sanggau ;320; Truk Standar ;6; Rp2.100.000 ; Rp2.780 ; Rp889.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp281.600 ; Rp1.371.200 ; Rp728.800 ;102,7697352; Rp74.898.583 
+;Ledo / Subah;220; Truk Standar ;6; Rp1.850.000 ; Rp2.780 ; Rp611.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp193.600 ; Rp1.005.200 ; Rp844.800 ;88,65836056; Rp74.898.583 
+;Aruk / Sijang ;270; Truk Standar ;6; Rp2.100.000 ; Rp2.780 ; Rp750.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp237.600 ; Rp1.188.200 ; Rp911.800 ;82,14365321; Rp74.898.583 
+;Galing / kartiasa / Sabok;165; Truk Standar ;6; Rp1.850.000 ; Rp2.780 ; Rp458.700 ; Rp200.000 ; Rp400 ; Rp80 ; Rp145.200 ; Rp803.900 ; Rp1.046.100 ;71,59791894; Rp74.898.583 
+;Bengkayang;200; Truk Standar ;6; Rp2.100.000 ; Rp2.780 ; Rp556.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp176.000 ; Rp932.000 ; Rp1.168.000 ;64,12549914; Rp74.898.583 
+;Sambas / Psr / Lumbang;130; Truk Standar ;6; Rp1.550.000 ; Rp2.780 ; Rp361.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp114.400 ; Rp675.800 ; Rp874.200 ;85,67671357; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;230; Truk Standar ;6; Rp2.100.000 ; Rp2.780 ; Rp639.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp202.400 ; Rp1.041.800 ; Rp1.058.200 ;70,77923171; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );125; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp347.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp110.000 ; Rp657.500 ; Rp1.342.500 ;55,7903784; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;55; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp152.900 ; Rp200.000 ; Rp400 ; Rp80 ; Rp48.400 ; Rp401.300 ; Rp1.348.700 ;55,53390895; Rp74.898.583 
+;Serindang / Sei kelambu;55; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp152.900 ; Rp200.000 ; Rp400 ; Rp80 ; Rp48.400 ; Rp401.300 ; Rp1.348.700 ;55,53390895; Rp74.898.583 
+;Singkawang / Selakau;50; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp139.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp44.000 ; Rp383.000 ; Rp1.367.000 ;54,79047769; Rp74.898.583 
+;Slk Dalam / Sepinggan;35; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp97.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp30.800 ; Rp328.100 ; Rp1.421.900 ;52,67500035; Rp74.898.583 
+;;;;;;;;;;;;;;;
+Keberangkatan dari Singkawang;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Singkawang;Jagoi / Seluas / Sanggau ;350; Truk Standar ;6; Rp2.200.000 ; Rp2.780 ; Rp973.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp308.000 ; Rp1.481.000 ; Rp719.000 ;104,170491; Rp74.898.583 
+;Ledo / Subah;240; Truk Standar ;6; Rp1.950.000 ; Rp2.780 ; Rp667.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp211.200 ; Rp1.078.400 ; Rp871.600 ;85,93228889; Rp74.898.583 
+;Aruk / Sijang ;335; Truk Standar ;6; Rp2.200.000 ; Rp2.780 ; Rp931.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp294.800 ; Rp1.426.100 ; Rp773.900 ;96,78069906; Rp74.898.583 
+;Galing / kartiasa / Sabok;230; Truk Standar ;6; Rp1.950.000 ; Rp2.780 ; Rp639.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp202.400 ; Rp1.041.800 ; Rp908.200 ;82,46926118; Rp74.898.583 
+;Bengkayang;145; Truk Standar ;6; Rp2.000.000 ; Rp2.780 ; Rp403.100 ; Rp200.000 ; Rp400 ; Rp80 ; Rp127.600 ; Rp730.700 ; Rp1.269.300 ;59,00778618; Rp74.898.583 
+;Sambas / Psr / Lumbang;190; Truk Standar ;6; Rp1.650.000 ; Rp2.780 ; Rp528.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp167.200 ; Rp895.400 ; Rp754.600 ;99,25600716; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;300; Truk Standar ;6; Rp2.200.000 ; Rp2.780 ; Rp834.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp264.000 ; Rp1.298.000 ; Rp902.000 ;83,03612306; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );140; Truk Standar ;6; Rp2.100.000 ; Rp2.780 ; Rp389.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp123.200 ; Rp712.400 ; Rp1.387.600 ;53,97707048; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;125; Truk Standar ;6; Rp1.850.000 ; Rp2.780 ; Rp347.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp110.000 ; Rp657.500 ; Rp1.192.500 ;62,80803606; Rp74.898.583 
+;Serindang / Sei kelambu;120; Truk Standar ;6; Rp1.850.000 ; Rp2.780 ; Rp333.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp105.600 ; Rp639.200 ; Rp1.210.800 ;61,85875702; Rp74.898.583 
+;Singkawang / Selakau;40; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp111.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp35.200 ; Rp346.400 ; Rp1.403.600 ;53,36177187; Rp74.898.583 
+;Slk Dalam / Sepinggan;70; Truk Standar ;6; Rp1.750.000 ; Rp2.780 ; Rp194.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp61.600 ; Rp456.200 ; Rp1.293.800 ;57,89038723; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Sambas;Jagoi / Seluas / Sanggau ;250; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp434.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp180.000 ; Rp814.500 ; Rp385.500 ;194,2894501; Rp74.898.583 
+;Ledo / Subah;120; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp208.560 ; Rp200.000 ; Rp400 ; Rp80 ; Rp86.400 ; Rp494.960 ; Rp455.040 ;164,5978002; Rp74.898.583 
+;Aruk / Sijang ;195; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp338.910 ; Rp200.000 ; Rp400 ; Rp80 ; Rp140.400 ; Rp679.310 ; Rp520.690 ;143,8448655; Rp74.898.583 
+;Galing / kartiasa / Sabok;80; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp139.040 ; Rp200.000 ; Rp400 ; Rp80 ; Rp57.600 ; Rp396.640 ; Rp553.360 ;135,3523619; Rp74.898.583 
+;Bengkayang;300; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp521.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp216.000 ; Rp937.400 ; Rp262.600 ;285,2192803; Rp74.898.583 
+;Sambas / Psr / Lumbang;40; Engkel ;4; Rp650.000 ; Rp1.738 ; Rp69.520 ; Rp200.000 ; Rp400 ; Rp80 ; Rp28.800 ; Rp298.320 ; Rp351.680 ;212,9736778; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;160; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp278.080 ; Rp200.000 ; Rp400 ; Rp80 ; Rp115.200 ; Rp593.280 ; Rp606.720 ;123,4483501; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );85; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp147.730 ; Rp200.000 ; Rp400 ; Rp80 ; Rp61.200 ; Rp408.930 ; Rp791.070 ;94,68009531; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;95; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp165.110 ; Rp200.000 ; Rp400 ; Rp80 ; Rp68.400 ; Rp433.510 ; Rp516.490 ;145,014585; Rp74.898.583 
+;Serindang / Sei kelambu;85; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp147.730 ; Rp200.000 ; Rp400 ; Rp80 ; Rp61.200 ; Rp408.930 ; Rp541.070 ;138,4267895; Rp74.898.583 
+;Singkawang / Selakau;170; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp295.460 ; Rp200.000 ; Rp400 ; Rp80 ; Rp122.400 ; Rp617.860 ; Rp332.140 ;225,5030499; Rp74.898.583 
+;Slk Dalam / Sepinggan;125; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp217.250 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp507.250 ; Rp442.750 ;169,16676; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Pemangkat;Jagoi / Seluas / Sanggau ;320; Engkel ;4; Rp1.300.000 ; Rp1.738 ; Rp556.160 ; Rp200.000 ; Rp400 ; Rp80 ; Rp230.400 ; Rp986.560 ; Rp313.440 ;238,9566839; Rp74.898.583 
+;Ledo / Subah;220; Engkel ;4; Rp1.050.000 ; Rp1.738 ; Rp382.360 ; Rp200.000 ; Rp400 ; Rp80 ; Rp158.400 ; Rp740.760 ; Rp309.240 ;242,2021181; Rp74.898.583 
+;Aruk / Sijang ;270; Engkel ;4; Rp1.300.000 ; Rp1.738 ; Rp469.260 ; Rp200.000 ; Rp400 ; Rp80 ; Rp194.400 ; Rp863.660 ; Rp436.340 ;171,6518839; Rp74.898.583 
+;Galing / kartiasa / Sabok;165; Engkel ;4; Rp1.050.000 ; Rp1.738 ; Rp286.770 ; Rp200.000 ; Rp400 ; Rp80 ; Rp118.800 ; Rp605.570 ; Rp444.430 ;168,5272889; Rp74.898.583 
+;Bengkayang;200; Engkel ;4; Rp1.300.000 ; Rp1.738 ; Rp347.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp144.000 ; Rp691.600 ; Rp608.400 ;123,1074671; Rp74.898.583 
+;Sambas / Psr / Lumbang;130; Engkel ;4; Rp750.000 ; Rp1.738 ; Rp225.940 ; Rp200.000 ; Rp400 ; Rp80 ; Rp93.600 ; Rp519.540 ; Rp230.460 ;324,996021; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;230; Engkel ;4; Rp1.300.000 ; Rp1.738 ; Rp399.740 ; Rp200.000 ; Rp400 ; Rp80 ; Rp165.600 ; Rp765.340 ; Rp534.660 ;140,0863783; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );125; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp217.250 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp507.250 ; Rp692.750 ;108,1177669; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;55; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp95.590 ; Rp200.000 ; Rp400 ; Rp80 ; Rp39.600 ; Rp335.190 ; Rp614.810 ;121,8239505; Rp74.898.583 
+;Serindang / Sei kelambu;55; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp95.590 ; Rp200.000 ; Rp400 ; Rp80 ; Rp39.600 ; Rp335.190 ; Rp614.810 ;121,8239505; Rp74.898.583 
+;Singkawang / Selakau;50; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp86.900 ; Rp200.000 ; Rp400 ; Rp80 ; Rp36.000 ; Rp322.900 ; Rp627.100 ;119,4364264; Rp74.898.583 
+;Slk Dalam / Sepinggan;35; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp60.830 ; Rp200.000 ; Rp400 ; Rp80 ; Rp25.200 ; Rp286.030 ; Rp663.970 ;112,8041674; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Singkawang;Jagoi / Seluas / Sanggau ;350; Engkel ;4; Rp1.400.000 ; Rp1.738 ; Rp608.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp252.000 ; Rp1.060.300 ; Rp339.700 ;220,4844951; Rp74.898.583 
+;Ledo / Subah;240; Engkel ;4; Rp1.150.000 ; Rp1.738 ; Rp417.120 ; Rp200.000 ; Rp400 ; Rp80 ; Rp172.800 ; Rp789.920 ; Rp360.080 ;208,005396; Rp74.898.583 
+;Aruk / Sijang ;335; Engkel ;4; Rp1.400.000 ; Rp1.738 ; Rp582.230 ; Rp200.000 ; Rp400 ; Rp80 ; Rp241.200 ; Rp1.023.430 ; Rp376.570 ;198,8968399; Rp74.898.583 
+;Galing / kartiasa / Sabok;230; Engkel ;4; Rp1.150.000 ; Rp1.738 ; Rp399.740 ; Rp200.000 ; Rp400 ; Rp80 ; Rp165.600 ; Rp765.340 ; Rp384.660 ;194,713729; Rp74.898.583 
+;Bengkayang;145; Engkel ;4; Rp1.200.000 ; Rp1.738 ; Rp252.010 ; Rp200.000 ; Rp400 ; Rp80 ; Rp104.400 ; Rp556.410 ; Rp643.590 ;116,376238; Rp74.898.583 
+;Sambas / Psr / Lumbang;190; Engkel ;4; Rp850.000 ; Rp1.738 ; Rp330.220 ; Rp200.000 ; Rp400 ; Rp80 ; Rp136.800 ; Rp667.020 ; Rp182.980 ;409,3266095; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;300; Engkel ;4; Rp1.400.000 ; Rp1.738 ; Rp521.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp216.000 ; Rp937.400 ; Rp462.600 ;161,9078751; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );140; Engkel ;4; Rp1.300.000 ; Rp1.738 ; Rp243.320 ; Rp200.000 ; Rp400 ; Rp80 ; Rp100.800 ; Rp544.120 ; Rp755.880 ;99,08792798; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;125; Engkel ;4; Rp1.050.000 ; Rp1.738 ; Rp217.250 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp507.250 ; Rp542.750 ;137,9983105; Rp74.898.583 
+;Serindang / Sei kelambu;120; Engkel ;4; Rp1.050.000 ; Rp1.738 ; Rp208.560 ; Rp200.000 ; Rp400 ; Rp80 ; Rp86.400 ; Rp494.960 ; Rp555.040 ;134,9426762; Rp74.898.583 
+;Singkawang / Selakau;40; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp69.520 ; Rp200.000 ; Rp400 ; Rp80 ; Rp28.800 ; Rp298.320 ; Rp651.680 ;114,9315354; Rp74.898.583 
+;Slk Dalam / Sepinggan;70; Engkel ;4; Rp950.000 ; Rp1.738 ; Rp121.660 ; Rp200.000 ; Rp400 ; Rp80 ; Rp50.400 ; Rp372.060 ; Rp577.940 ;129,5957764; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Sambas;Jagoi / Seluas / Sanggau ;250; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp373.750 ; Rp200.000 ; Rp400 ; Rp80 ; Rp180.000 ; Rp753.750 ; Rp246.250 ;304,1566822; Rp74.898.583 
+;Ledo / Subah;120; Pick up ;4; 750.000 ; Rp1.495 ; Rp179.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp86.400 ; Rp465.800 ; Rp284.200 ;263,5418121; Rp74.898.583 
+;Aruk / Sijang ;195; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp291.525 ; Rp200.000 ; Rp400 ; Rp80 ; Rp140.400 ; Rp631.925 ; Rp368.075 ;203,4872866; Rp74.898.583 
+;Galing / kartiasa / Sabok;80; Pick up ;4; 750.000 ; Rp1.495 ; Rp119.600 ; Rp200.000 ; Rp400 ; Rp80 ; Rp57.600 ; Rp377.200 ; Rp372.800 ;200,9082162; Rp74.898.583 
+;Bengkayang;300; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp448.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp216.000 ; Rp864.500 ; Rp135.500 ;552,7570701; Rp74.898.583 
+;Sambas / Psr / Lumbang;40; Pick up ;4; 450.000 ; Rp1.495 ; Rp59.800 ; Rp200.000 ; Rp400 ; Rp80 ; Rp28.800 ; Rp288.600 ; Rp161.400 ;464,0556568; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;160; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp239.200 ; Rp200.000 ; Rp400 ; Rp80 ; Rp115.200 ; Rp554.400 ; Rp445.600 ;168,0847913; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );85; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp127.075 ; Rp200.000 ; Rp400 ; Rp80 ; Rp61.200 ; Rp388.275 ; Rp611.725 ;122,4383228; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;95; Pick up ;4; 750.000 ; Rp1.495 ; Rp142.025 ; Rp200.000 ; Rp400 ; Rp80 ; Rp68.400 ; Rp410.425 ; Rp339.575 ;220,5656571; Rp74.898.583 
+;Serindang / Sei kelambu;85; Pick up ;4; 750.000 ; Rp1.495 ; Rp127.075 ; Rp200.000 ; Rp400 ; Rp80 ; Rp61.200 ; Rp388.275 ; Rp361.725 ;207,0594595; Rp74.898.583 
+;Singkawang / Selakau;170; Pick up ;4; 750.000 ; Rp1.495 ; Rp254.150 ; Rp200.000 ; Rp400 ; Rp80 ; Rp122.400 ; Rp576.550 ; Rp173.450 ;431,8165639; Rp74.898.583 
+;Slk Dalam / Sepinggan;125; Pick up ;4; 750.000 ; Rp1.495 ; Rp186.875 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp476.875 ; Rp273.125 ;274,2282215; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Pemangkat;Jagoi / Seluas / Sanggau ;320; Pick up ;4; 1.100.000 ; Rp1.495 ; Rp478.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp230.400 ; Rp908.800 ; Rp191.200 ;391,7289906; Rp74.898.583 
+;Ledo / Subah;220; Pick up ;4; 850.000 ; Rp1.495 ; Rp328.900 ; Rp200.000 ; Rp400 ; Rp80 ; Rp158.400 ; Rp687.300 ; Rp162.700 ;460,347775; Rp74.898.583 
+;Aruk / Sijang ;270; Pick up ;4; 1.100.000 ; Rp1.495 ; Rp403.650 ; Rp200.000 ; Rp400 ; Rp80 ; Rp194.400 ; Rp798.050 ; Rp301.950 ;248,0496208; Rp74.898.583 
+;Galing / kartiasa / Sabok;165; Pick up ;4; 850.000 ; Rp1.495 ; Rp246.675 ; Rp200.000 ; Rp400 ; Rp80 ; Rp118.800 ; Rp565.475 ; Rp284.525 ;263,2407802; Rp74.898.583 
+;Bengkayang;200; Pick up ;4; 1.100.000 ; Rp1.495 ; Rp299.000 ; Rp200.000 ; Rp400 ; Rp80 ; Rp144.000 ; Rp643.000 ; Rp457.000 ;163,8918665; Rp74.898.583 
+;Sambas / Psr / Lumbang;130; Pick up ;4; 550.000 ; Rp1.495 ; Rp194.350 ; Rp200.000 ; Rp400 ; Rp80 ; Rp93.600 ; Rp487.950 ; Rp62.050 ;1207,068219; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;230; Pick up ;4; 1.100.000 ; Rp1.495 ; Rp343.850 ; Rp200.000 ; Rp400 ; Rp80 ; Rp165.600 ; Rp709.450 ; Rp390.550 ;191,7771937; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );125; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp186.875 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp476.875 ; Rp523.125 ;143,175308; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;55; Pick up ;4; 750.000 ; Rp1.495 ; Rp82.225 ; Rp200.000 ; Rp400 ; Rp80 ; Rp39.600 ; Rp321.825 ; Rp428.175 ;174,9251661; Rp74.898.583 
+;Serindang / Sei kelambu;55; Pick up ;4; 750.000 ; Rp1.495 ; Rp82.225 ; Rp200.000 ; Rp400 ; Rp80 ; Rp39.600 ; Rp321.825 ; Rp428.175 ;174,9251661; Rp74.898.583 
+;Singkawang / Selakau;50; Pick up ;4; 750.000 ; Rp1.495 ; Rp74.750 ; Rp200.000 ; Rp400 ; Rp80 ; Rp36.000 ; Rp310.750 ; Rp439.250 ;170,5147023; Rp74.898.583 
+;Slk Dalam / Sepinggan;35; Pick up ;4; 750.000 ; Rp1.495 ; Rp52.325 ; Rp200.000 ; Rp400 ; Rp80 ; Rp25.200 ; Rp277.525 ; Rp472.475 ;158,5239071; Rp74.898.583 
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Berangkat;tujuan;Jarak tempuh (KM);Tipe mobil;jumlah ban; Harga per trip ; harga bbm per 1 kilometer ; harga bbm ; uang jalan ; maintanance ; ban ;maintanance dan ban; Total Cost ;Margin;BEP (TRIP); Fixed Cost 
+Singkawang;Jagoi / Seluas / Sanggau ;350; Pick up ;4; 1.200.000 ; Rp1.495 ; Rp523.250 ; Rp200.000 ; Rp400 ; Rp80 ; Rp252.000 ; Rp975.250 ; Rp224.750 ;333,2528721; Rp74.898.583 
+;Ledo / Subah;240; Pick up ;4; 950.000 ; Rp1.495 ; Rp358.800 ; Rp200.000 ; Rp400 ; Rp80 ; Rp172.800 ; Rp731.600 ; Rp218.400 ;342,9422299; Rp74.898.583 
+;Aruk / Sijang ;335; Pick up ;4; 1.200.000 ; Rp1.495 ; Rp500.825 ; Rp200.000 ; Rp400 ; Rp80 ; Rp241.200 ; Rp942.025 ; Rp257.975 ;290,3327183; Rp74.898.583 
+;Galing / kartiasa / Sabok;230; Pick up ;4; 950.000 ; Rp1.495 ; Rp343.850 ; Rp200.000 ; Rp400 ; Rp80 ; Rp165.600 ; Rp709.450 ; Rp240.550 ;311,3638869; Rp74.898.583 
+;Bengkayang;145; Pick up ;4; 1.000.000 ; Rp1.495 ; Rp216.775 ; Rp200.000 ; Rp400 ; Rp80 ; Rp104.400 ; Rp521.175 ; Rp478.825 ;156,4216217; Rp74.898.583 
+;Sambas / Psr / Lumbang;190; Pick up ;4; 650.000 ; Rp1.495 ; Rp284.050 ; Rp200.000 ; Rp400 ; Rp80 ; Rp136.800 ; Rp620.850 ; Rp29.150 ;2569,419657; Rp74.898.583 
+;Paloh / Purun / TH / Sekura / Simpang 4;300; Pick up ;4; 1.200.000 ; Rp1.495 ; Rp448.500 ; Rp200.000 ; Rp400 ; Rp80 ; Rp216.000 ; Rp864.500 ; Rp335.500 ;223,2446587; Rp74.898.583 
+;Jawai ( Pampang - Sei baru );140; Pick up ;4; 1.100.000 ; Rp1.495 ; Rp209.300 ; Rp200.000 ; Rp400 ; Rp80 ; Rp100.800 ; Rp510.100 ; Rp589.900 ;126,9682709; Rp74.898.583 
+;Pemangkat / Spr / Tebas / Spl / Sebawi;125; Pick up ;4; 850.000 ; Rp1.495 ; Rp186.875 ; Rp200.000 ; Rp400 ; Rp80 ; Rp90.000 ; Rp476.875 ; Rp373.125 ;200,7332208; Rp74.898.583 
+;Serindang / Sei kelambu;120; Pick up ;4; 850.000 ; Rp1.495 ; Rp179.400 ; Rp200.000 ; Rp400 ; Rp80 ; Rp86.400 ; Rp465.800 ; Rp384.200 ;194,9468584; Rp74.898.583 
+;Singkawang / Selakau;40; Pick up ;4; 750.000 ; Rp1.495 ; Rp59.800 ; Rp200.000 ; Rp400 ; Rp80 ; Rp28.800 ; Rp288.600 ; Rp461.400 ;162,3289619; Rp74.898.583 
+;Slk Dalam / Sepinggan;70; Pick up ;4; 750.000 ; Rp1.495 ; Rp104.650 ; Rp200.000 ; Rp400 ; Rp80 ; Rp50.400 ; Rp355.050 ; Rp394.950 ;189,640671; Rp74.898.583 
