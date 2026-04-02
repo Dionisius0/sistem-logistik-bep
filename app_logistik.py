@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 import io
+import os
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE ---
 def buat_invoice_gambar(nama_klien, armada, volume, tagihan):
@@ -45,14 +45,21 @@ st.set_page_config(page_title="Tango Logistik - Dasbor Operasional", layout="wid
 st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
 st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
-# --- KONEKSI GOOGLE SHEETS (DATABASE MEMORI) ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    existing_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
-    existing_data = existing_data.dropna(how="all")
-except Exception as e:
-    existing_data = pd.DataFrame()
-    st.sidebar.warning("Memori Google Sheets belum terhubung. Fitur penyimpanan dinonaktifkan sementara.")
+# --- DATABASE LOKAL (PENGGANTI GOOGLE SHEETS) ---
+NAMA_FILE_DB = "database_invoice.csv"
+
+# Membuat file CSV kosong dengan nama kolom jika belum pernah ada
+if not os.path.exists(NAMA_FILE_DB):
+    df_kosong = pd.DataFrame(columns=[
+        "Waktu_Input", "Armada", "Total_Harga_Trip", 
+        "Klien_1", "Volume_1", "Tagihan_1", 
+        "Klien_2", "Volume_2", "Tagihan_2", 
+        "Klien_3", "Volume_3", "Tagihan_3"
+    ])
+    df_kosong.to_csv(NAMA_FILE_DB, index=False)
+
+# Membaca data yang sudah tersimpan
+existing_data = pd.read_csv(NAMA_FILE_DB)
 
 try:
     # --- BAGIAN 2: Membaca Semua Data CSV Lokal ---
@@ -276,7 +283,7 @@ try:
                     total_trip_mingguan += jml_trip
                     
                     data_laporan_jadwal.append({
-                        "Hari": Hari, "Armada": mobil, "Rute": rute_dipilih, "Jml Trip": jml_trip, 
+                        "Hari": hari, "Armada": mobil, "Rute": rute_dipilih, "Jml Trip": jml_trip, 
                         "Pendapatan Utama": harga_rute_aktual * jml_trip, 
                         "Pendapatan Muatan Balik (Nett 55%)": pendapatan_ekstra_bersih * jml_trip,
                         "Total Biaya": cost_rute_aktual * jml_trip
@@ -449,13 +456,13 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (GOOGLE SHEETS ENABLED)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (LOKAL MEMORI)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
         st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Memory Enabled)"])
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Memori Aktif)"])
         
         with tab1:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
@@ -495,8 +502,9 @@ try:
 
         with tab3:
             st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Memori")
-            st.info("Setiap data yang disimpan di sini akan terekam ke Google Sheets dan tidak akan hilang meskipun browser ditutup.")
+            st.info("Setiap data yang disimpan di sini akan terekam ke dalam memori aplikasi dan tidak akan hilang meskipun browser ditutup (kecuali server tertidur).")
             
+            # --- LOGIKA MEMORI: Mengambil baris terakhir dari CSV ---
             last_row = existing_data.iloc[-1] if not existing_data.empty else None
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
@@ -544,34 +552,29 @@ try:
                     
                     st.markdown("---")
                     
-                    # 🔥 PERBAIKAN FATAL: MENGGUNAKAN METODE SUNTIK (APPEND)
-                    if st.button("🚀 SIMPAN DATA SEKARANG (VERSI BARU)", type="primary"):
-                        with st.spinner("Sedang menyuntikkan data langsung ke brankas..."):
-                            try:
-                                # Mengambil alamat spreadsheet yang sudah pasti benar
-                                url_sheet = "https://docs.google.com/spreadsheets/d/1x4kg_lbCaFDKf-3sEKuUwy4ZknvetTP7e4DOh7MsS4g/edit"
-                                
-                                # Menggunakan Gspread Client (bawaan st-gsheets) untuk menyisipkan data
-                                doc = conn.client.open_by_url(url_sheet)
-                                ws = doc.worksheet("Data_Invoice")
-                                
-                                # Data yang akan dikirim (urutan harus pas dengan A-L)
-                                data_baru = [
-                                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    armada_inv, float(harga_target_trip),
-                                    klien_1, float(vol_1), float(tagihan_1),
-                                    klien_2, float(vol_2), float(tagihan_2),
-                                    klien_3, float(vol_3), float(tagihan_3)
-                                ]
-                                
-                                # Suntik data ke baris paling bawah yang kosong!
-                                ws.append_row(data_baru)
-                                
-                                st.cache_data.clear()
-                                st.success("✅ BERHASIL SUNTIK DATA! Silakan cek Google Sheets-mu sekarang.")
-                                st.balloons() # Beri animasi meriah sebagai tanda sukses
-                            except Exception as e:
-                                st.error(f"❌ Gagal menyimpan ke Google Sheets: {e}")
+                    # SIMPAN KE DATABASE LOKAL
+                    if st.button("🚀 SIMPAN DATA KE MEMORI LOKAL", type="primary"):
+                        try:
+                            # Buat data baru yang akan dimasukkan
+                            new_data = pd.DataFrame([{
+                                "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
+                                "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
+                                "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
+                                "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
+                            }])
+                            
+                            # Menggabungkan data lama dan baru
+                            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+                            
+                            # Menyimpan langsung ke dalam server (file CSV)
+                            updated_df.to_csv(NAMA_FILE_DB, index=False)
+                            
+                            st.success("✅ BERHASIL! Data telah tersimpan di memori aplikasi.")
+                            st.balloons()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Gagal menyimpan data: {e}")
 
                     st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
                     col_dl1, col_dl2, col_dl3 = st.columns(3)
