@@ -48,7 +48,8 @@ st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 # --- KONEKSI GOOGLE SHEETS (DATABASE MEMORI) ---
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    existing_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)))
+    # PERBAIKAN 1: Tambahkan ttl=0 agar Streamlit tidak pakai ingatan malas
+    existing_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
     existing_data = existing_data.dropna(how="all")
 except Exception as e:
     existing_data = pd.DataFrame()
@@ -546,22 +547,31 @@ try:
                     
                     st.markdown("---")
                     
-                    # FITUR DATABASE: Tombol Simpan ke Google Sheets
+                    # PERBAIKAN 2: Tombol Simpan ke Google Sheets dengan Spinner dan Clear Cache
                     if st.button("💾 SIMPAN DATA KE DATABASE PERMANEN", type="primary"):
-                        try:
-                            new_data = pd.DataFrame([{
-                                "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
-                                "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
-                                "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
-                                "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
-                            }])
-                            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-                            conn.update(worksheet="Data_Invoice", data=updated_df)
-                            st.success("✅ BERHASIL! Data telah tersimpan dengan aman di Google Sheets Anda.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal menyimpan ke Google Sheets: {e}")
+                        with st.spinner("Sedang memproses penyimpanan data..."):
+                            try:
+                                new_data = pd.DataFrame([{
+                                    "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
+                                    "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
+                                    "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
+                                    "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
+                                }])
+                                
+                                # Tarik data ter-update tepat sebelum menyimpan
+                                fresh_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
+                                fresh_data = fresh_data.dropna(how="all")
+                                
+                                updated_df = pd.concat([fresh_data, new_data], ignore_index=True)
+                                conn.update(worksheet="Data_Invoice", data=updated_df)
+                                
+                                # Menghapus memori agar Streamlit membaca data baru saat selesai
+                                st.cache_data.clear()
+                                
+                                st.success("✅ BERHASIL! Data telah tersimpan dengan aman di Google Sheets Anda.")
+                            except Exception as e:
+                                st.error(f"Gagal menyimpan ke Google Sheets: {e}")
 
                     st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
                     col_dl1, col_dl2, col_dl3 = st.columns(3)
