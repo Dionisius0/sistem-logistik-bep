@@ -401,13 +401,12 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu mahal/boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (UPDATE: TAB INVOICE LTL)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (UPDATE: VOLUME CM3 & ARMADA)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
         st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        # Membuat Sistem Tab (Ditambah Tab ke-3)
         tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Konsolidasi Muatan)"])
         
         with tab1:
@@ -446,61 +445,66 @@ try:
                 elif angka_hari > 30: st.error(f"🚨 Siapkan minimal **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk talangan.")
                 else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
-        # --- ISI TAB 3 (BARU): INVOICE KONSOLIDASI (LTL) ---
+        # --- ISI TAB 3 (BARU): INVOICE KONSOLIDASI (LTL) DENGAN VOLUME CM3 ---
         with tab3:
-            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata (Sistem Pecah Muatan)")
-            st.info("Fitur ini membagi Harga Trip secara adil kepada beberapa klien berdasarkan persentase berat muatan, sehingga pendapatan Anda tetap 100% utuh meskipun ada ruang kosong (gap) di dalam armada.")
+            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata (Sistem Pecah Muatan Volume)")
+            st.info("Fitur ini membagi Harga Trip secara adil kepada klien berdasarkan persentase volume muatan (cm³), sehingga pendapatan tetap utuh meskipun ada ruang kosong di bak truk.")
             
-            col_inv1, col_inv2 = st.columns(2)
+            col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
-                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=3000000.0, step=100000.0)
+                # Mengambil daftar armada dari data excel
+                pilihan_mobil_list_inv = data_mobil['Tipe Mobil'].dropna().unique().tolist() if 'Tipe Mobil' in data_mobil.columns else ["Truk Default"]
+                armada_inv = st.selectbox("Pilih Armada yang Berangkat:", pilihan_mobil_list_inv, key="armada_inv")
             with col_inv2:
-                kapasitas_truk_inv = st.number_input("Kapasitas Maksimal Truk (Ton):", min_value=1.0, value=9.0, step=1.0)
+                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=3000000.0, step=100000.0)
+            with col_inv3:
+                # Default 12 Juta cm3 (12 CBM) untuk estimasi truk engkel standar
+                kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=12000000.0, step=500000.0, format="%.0f")
             
-            st.markdown("**📝 Masukkan Rincian Muatan Klien:**")
+            st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {armada_inv}:**")
             col_klien1, col_klien2, col_klien3 = st.columns(3)
             with col_klien1:
                 klien_1 = st.text_input("Nama Klien 1:", value="Perusahaan A (Pemangkat)")
-                ton_1 = st.number_input("Berat Muatan Klien 1 (Ton):", min_value=0.0, value=2.0, step=0.5)
+                vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=3000000.0, step=100000.0, format="%.0f")
             with col_klien2:
                 klien_2 = st.text_input("Nama Klien 2:", value="Perusahaan B (Singkawang)")
-                ton_2 = st.number_input("Berat Muatan Klien 2 (Ton):", min_value=0.0, value=3.0, step=0.5)
+                vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=4000000.0, step=100000.0, format="%.0f")
             with col_klien3:
                 klien_3 = st.text_input("Nama Klien 3:", value="Perusahaan C (Sambas)")
-                ton_3 = st.number_input("Berat Muatan Klien 3 (Ton):", min_value=0.0, value=2.0, step=0.5)
+                vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=2500000.0, step=100000.0, format="%.0f")
             
-            total_muatan_aktual = ton_1 + ton_2 + ton_3
+            total_muatan_aktual = vol_1 + vol_2 + vol_3
             sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
             
             st.markdown("---")
             if total_muatan_aktual > 0:
                 if total_muatan_aktual > kapasitas_truk_inv:
-                    st.error(f"🚨 OVERLOAD! Total muatan ({total_muatan_aktual} Ton) melebihi kapasitas maksimum armada ({kapasitas_truk_inv} Ton).")
+                    st.error(f"🚨 OVERLOAD! Total muatan ({total_muatan_aktual:,.0f} cm³) melebihi kapasitas maksimum {armada_inv} ({kapasitas_truk_inv:,.0f} cm³).")
                 else:
-                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual} Ton. Sisa ruang kosong (Gap): {sisa_kapasitas} Ton.")
+                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual:,.0f} cm³. Sisa ruang kosong (Gap): {sisa_kapasitas:,.0f} cm³.")
                     
                     # Logika Prorata Murni (Membagi 100% Harga Trip ke muatan yang ada)
-                    pct_1 = ton_1 / total_muatan_aktual
-                    pct_2 = ton_2 / total_muatan_aktual
-                    pct_3 = ton_3 / total_muatan_aktual
+                    pct_1 = vol_1 / total_muatan_aktual
+                    pct_2 = vol_2 / total_muatan_aktual
+                    pct_3 = vol_3 / total_muatan_aktual
                     
                     tagihan_1 = pct_1 * harga_target_trip
                     tagihan_2 = pct_2 * harga_target_trip
                     tagihan_3 = pct_3 * harga_target_trip
                     
-                    st.markdown("**💵 Rincian Tagihan Invoice (Pro-rata):**")
+                    st.markdown("**💵 Rincian Tagihan Invoice (Pro-rata Berdasarkan Volume):**")
                     col_tag1, col_tag2, col_tag3 = st.columns(3)
                     
-                    if ton_1 > 0:
-                        col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}", f"{pct_1*100:.1f}% dari Total")
-                    if ton_2 > 0:
-                        col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}", f"{pct_2*100:.1f}% dari Total")
-                    if ton_3 > 0:
-                        col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}", f"{pct_3*100:.1f}% dari Total")
+                    if vol_1 > 0:
+                        col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}", f"{pct_1*100:.1f}% dari Volume Terpakai")
+                    if vol_2 > 0:
+                        col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}", f"{pct_2*100:.1f}% dari Volume Terpakai")
+                    if vol_3 > 0:
+                        col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}", f"{pct_3*100:.1f}% dari Volume Terpakai")
                         
-                    st.info(f"💡 Meskipun terdapat sisa kapasitas kosong {sisa_kapasitas} Ton, total pendapatan Anda dari perjalanan ini tetap aman di angka **Rp {tagihan_1 + tagihan_2 + tagihan_3:,.0f}**.")
+                    st.info(f"💡 Meskipun terdapat sisa kapasitas kosong {sisa_kapasitas:,.0f} cm³, total pendapatan Anda tetap utuh di angka **Rp {tagihan_1 + tagihan_2 + tagihan_3:,.0f}**.")
             else:
-                st.warning("Silakan masukkan tonase muatan minimal untuk 1 klien.")
+                st.warning("Silakan masukkan volume muatan minimal untuk 1 klien.")
 
 except Exception as e:
     st.error(f"Waduh, ada masalah internal: {e}")
