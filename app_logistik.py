@@ -401,20 +401,17 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu mahal/boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (FITUR BARU DENGAN TAB)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (UPDATE: TAB INVOICE LTL)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
-        st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset dan simulasi modal kerja (Working Capital) perusahaan.")
+        st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        # Membuat Sistem Tab
-        tab1, tab2 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas (Modal Kerja)"])
+        # Membuat Sistem Tab (Ditambah Tab ke-3)
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Konsolidasi Muatan)"])
         
-        # --- ISI TAB 1: PEMELIHARAAN BAN & MESIN ---
         with tab1:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
-            st.info("Kalkulator ini membantu Anda menyisihkan uang dari setiap trip rute, sehingga saat waktunya ganti ban, kas perusahaan tidak terganggu.")
-            
             col_ban1, col_ban2 = st.columns(2)
             with col_ban1:
                 harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=15000000.0, step=500000.0)
@@ -429,38 +426,81 @@ try:
                 
                 st.write("---")
                 st.metric("Biaya Keausan Ban per Kilometer", f"Rp {biaya_ban_per_km:,.0f} / KM")
-                st.success(f"💡 **Rekomendasi Akuntansi:** Anda wajib menyisihkan (menabung) **Rp {tabungan_per_trip:,.0f}** setiap kali truk menyelesaikan rute sejauh {jarak_rute_trip} KM ini, khusus untuk dana cadangan penggantian ban.")
+                st.success(f"💡 Anda wajib menyisihkan **Rp {tabungan_per_trip:,.0f}** setiap kali truk menyelesaikan rute sejauh {jarak_rute_trip} KM ini.")
 
-        # --- ISI TAB 2: SIMULATOR ARUS KAS & INVOICE ---
         with tab2:
             st.markdown("### 💸 Simulator Kebutuhan Modal Kerja (*Working Capital*)")
-            st.warning("Jika klien B2B Anda membayar tagihan secara mundur (*Term of Payment* / TOP), Anda harus menyiapkan uang tunai ekstra untuk menalangi biaya solar dan supir bulan berikutnya.")
-            
             col_cash1, col_cash2 = st.columns(2)
             with col_cash1:
                 proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=250000000.0, step=10000000.0)
                 top_klien = st.selectbox("Rata-rata Klien Membayar Invoice (TOP):", [
-                    "0 Hari (Cash / Tunai Keras)", 
-                    "14 Hari", 
-                    "30 Hari (1 Bulan)", 
-                    "60 Hari (2 Bulan)", 
-                    "90 Hari (3 Bulan)"
+                    "0 Hari (Cash / Tunai Keras)", "14 Hari", "30 Hari (1 Bulan)", "60 Hari (2 Bulan)", "90 Hari (3 Bulan)"
                 ], index=2)
             
-            # Mengubah pilihan TOP menjadi angka hari
             angka_hari = int(top_klien.split(' ')[0])
             
             with col_cash2:
-                # Rumus Modal Kerja sederhana: (Biaya Bulanan / 30 hari) * Lama Menunggu Pembayaran
                 kebutuhan_modal_kerja = (proyeksi_biaya_bulanan / 30) * angka_hari
-                
                 st.metric("Dana Tunai (Modal Kerja) yang Harus Disiapkan", f"Rp {kebutuhan_modal_kerja:,.0f}")
-                if angka_hari == 0:
-                    st.success("✅ Bisnis yang sangat sehat! Karena klien membayar tunai, Anda tidak perlu menyiapkan modal talangan besar di bank.")
-                elif angka_hari > 30:
-                    st.error(f"🚨 Hati-hati! Klien menahan uang Anda cukup lama. Anda wajib memiliki minimal uang tunai sebesar **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk memastikan truk tetap bisa membeli solar sebelum tagihan cair.")
+                if angka_hari == 0: st.success("✅ Bisnis yang sangat sehat! Klien membayar tunai.")
+                elif angka_hari > 30: st.error(f"🚨 Siapkan minimal **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk talangan.")
+                else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
+
+        # --- ISI TAB 3 (BARU): INVOICE KONSOLIDASI (LTL) ---
+        with tab3:
+            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata (Sistem Pecah Muatan)")
+            st.info("Fitur ini membagi Harga Trip secara adil kepada beberapa klien berdasarkan persentase berat muatan, sehingga pendapatan Anda tetap 100% utuh meskipun ada ruang kosong (gap) di dalam armada.")
+            
+            col_inv1, col_inv2 = st.columns(2)
+            with col_inv1:
+                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=3000000.0, step=100000.0)
+            with col_inv2:
+                kapasitas_truk_inv = st.number_input("Kapasitas Maksimal Truk (Ton):", min_value=1.0, value=9.0, step=1.0)
+            
+            st.markdown("**📝 Masukkan Rincian Muatan Klien:**")
+            col_klien1, col_klien2, col_klien3 = st.columns(3)
+            with col_klien1:
+                klien_1 = st.text_input("Nama Klien 1:", value="Perusahaan A (Pemangkat)")
+                ton_1 = st.number_input("Berat Muatan Klien 1 (Ton):", min_value=0.0, value=2.0, step=0.5)
+            with col_klien2:
+                klien_2 = st.text_input("Nama Klien 2:", value="Perusahaan B (Singkawang)")
+                ton_2 = st.number_input("Berat Muatan Klien 2 (Ton):", min_value=0.0, value=3.0, step=0.5)
+            with col_klien3:
+                klien_3 = st.text_input("Nama Klien 3:", value="Perusahaan C (Sambas)")
+                ton_3 = st.number_input("Berat Muatan Klien 3 (Ton):", min_value=0.0, value=2.0, step=0.5)
+            
+            total_muatan_aktual = ton_1 + ton_2 + ton_3
+            sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
+            
+            st.markdown("---")
+            if total_muatan_aktual > 0:
+                if total_muatan_aktual > kapasitas_truk_inv:
+                    st.error(f"🚨 OVERLOAD! Total muatan ({total_muatan_aktual} Ton) melebihi kapasitas maksimum armada ({kapasitas_truk_inv} Ton).")
                 else:
-                    st.info(f"💡 Pastikan arus kas Anda memiliki penyangga (buffer) setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
+                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual} Ton. Sisa ruang kosong (Gap): {sisa_kapasitas} Ton.")
+                    
+                    # Logika Prorata Murni (Membagi 100% Harga Trip ke muatan yang ada)
+                    pct_1 = ton_1 / total_muatan_aktual
+                    pct_2 = ton_2 / total_muatan_aktual
+                    pct_3 = ton_3 / total_muatan_aktual
+                    
+                    tagihan_1 = pct_1 * harga_target_trip
+                    tagihan_2 = pct_2 * harga_target_trip
+                    tagihan_3 = pct_3 * harga_target_trip
+                    
+                    st.markdown("**💵 Rincian Tagihan Invoice (Pro-rata):**")
+                    col_tag1, col_tag2, col_tag3 = st.columns(3)
+                    
+                    if ton_1 > 0:
+                        col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}", f"{pct_1*100:.1f}% dari Total")
+                    if ton_2 > 0:
+                        col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}", f"{pct_2*100:.1f}% dari Total")
+                    if ton_3 > 0:
+                        col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}", f"{pct_3*100:.1f}% dari Total")
+                        
+                    st.info(f"💡 Meskipun terdapat sisa kapasitas kosong {sisa_kapasitas} Ton, total pendapatan Anda dari perjalanan ini tetap aman di angka **Rp {tagihan_1 + tagihan_2 + tagihan_3:,.0f}**.")
+            else:
+                st.warning("Silakan masukkan tonase muatan minimal untuk 1 klien.")
 
 except Exception as e:
     st.error(f"Waduh, ada masalah internal: {e}")
