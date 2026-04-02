@@ -152,16 +152,17 @@ st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
 st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
 # --- DATABASE LOKAL & SISTEM AUTO-SAVE ---
-NAMA_FILE_DB = "database_invoice.csv"
+NAMA_FILE_DB = "database_invoice_formal.csv"
 NAMA_FILE_JADWAL = "database_jadwal.csv"
 STATE_FILE_INPUTS = "auto_save_inputs.json"
 
 if not os.path.exists(NAMA_FILE_DB):
-    pd.DataFrame(columns=["Waktu_Input", "Armada", "Total_Harga_Trip", "Klien_1", "Volume_1", "Tagihan_1", "Klien_2", "Volume_2", "Tagihan_2", "Klien_3", "Volume_3", "Tagihan_3"]).to_csv(NAMA_FILE_DB, index=False)
+    pd.DataFrame(columns=["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"]).to_csv(NAMA_FILE_DB, index=False)
 
 if not os.path.exists(NAMA_FILE_JADWAL):
     pd.DataFrame(columns=["Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip", "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"]).to_csv(NAMA_FILE_JADWAL, index=False)
 
+# Mengambil ingatan kotak isian sebelumnya
 if os.path.exists(STATE_FILE_INPUTS):
     try:
         with open(STATE_FILE_INPUTS, "r") as f:
@@ -455,6 +456,49 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
+        st.markdown("---")
+        st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
+        col_dl, col_sv = st.columns(2)
+        
+        with col_dl:
+            if len(data_laporan_jadwal) > 0:
+                df_laporan = pd.DataFrame(data_laporan_jadwal)
+                csv_data = df_laporan.to_csv(index=False).encode('utf-8')
+                st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
+            else:
+                st.info("Pilih armada dan rute di atas untuk memunculkan tombol unduh.")
+
+        with col_sv:
+            if st.button("🚀 MENCETAK JADWAL KE BUKU BESAR (CSV)", type="primary"):
+                if len(data_laporan_jadwal) > 0:
+                    try:
+                        waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        data_simpan = []
+                        for baris in data_laporan_jadwal:
+                            data_simpan.append({
+                                "Waktu_Simpan": waktu_sekarang,
+                                "Hari": baris["Hari"],
+                                "Armada": baris["Armada"],
+                                "Rute": baris["Rute"],
+                                "Jml_Trip": baris["Jml Trip"],
+                                "Pendapatan_Utama": baris["Pendapatan Utama"],
+                                "Pendapatan_Backhaul": baris["Pendapatan Muatan Balik (Nett 55%)"],
+                                "Total_Biaya": baris["Total Biaya"]
+                            })
+                            
+                        df_jadwal_baru = pd.DataFrame(data_simpan)
+                        df_jadwal_lama = pd.read_csv(NAMA_FILE_JADWAL)
+                        
+                        df_gabungan_jadwal = pd.concat([df_jadwal_lama, df_jadwal_baru], ignore_index=True)
+                        df_gabungan_jadwal.to_csv(NAMA_FILE_JADWAL, index=False)
+                        
+                        st.success("✅ BERHASIL! Jadwal operasional telah dicetak ke Laporan Database Lokal.")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Gagal merekam jadwal: {e}")
+                else:
+                    st.warning("⚠️ Jadwal masih kosong. Silakan atur rute terlebih dahulu.")
+
     # =====================================================================
     # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
     # =====================================================================
@@ -620,13 +664,12 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (LOKAL MEMORI FULL OTOMATIS)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (INVOICE FORMAL & PRO-RATA)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
-        st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Auto-Save Aktif)"])
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Sistem Pembuatan Invoice B2B"])
         
         with tab1:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
@@ -740,7 +783,7 @@ try:
                     
                     st.markdown("---")
                     st.markdown("### 2️⃣ Formulir Cetak Invoice (Bisa Diedit Manual)")
-                    st.info("Sistem telah menyarankan **Harga/Volume** secara proporsional dari hitungan di atas. Silakan ubah alamat, keterangan, atau **edit harga manual** jika perlu, sebelum mencetak Invoice.")
+                    st.info("Sistem telah menyambungkan **Harga/Volume** dan **Total Volume** dari kalkulasi di atas secara otomatis.")
 
                     col_inv_tgl, col_inv_no = st.columns(2)
                     with col_inv_tgl:
@@ -764,10 +807,10 @@ try:
                             
                             c_hk1, c_bk1 = st.columns(2)
                             with c_hk1:
-                                hk1 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg1', tarif_per_unit)), step=10.0, key="hkg1")
+                                hk1 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg1")
                                 current_state['hkg1'] = hk1
                             with c_bk1:
-                                bk1 = st.number_input("Total Volume:", value=float(get_val('bkg1', vol_1)), step=100.0, key="bkg1")
+                                bk1 = st.number_input("Total Volume:", value=float(vol_1), step=100.0, key="bkg1")
                                 current_state['bkg1'] = bk1
 
                             jum1 = hk1 * bk1
@@ -798,10 +841,10 @@ try:
                             
                             c_hk2, c_bk2 = st.columns(2)
                             with c_hk2:
-                                hk2 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg2', tarif_per_unit)), step=10.0, key="hkg2")
+                                hk2 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg2")
                                 current_state['hkg2'] = hk2
                             with c_bk2:
-                                bk2 = st.number_input("Total Volume:", value=float(get_val('bkg2', vol_2)), step=100.0, key="bkg2")
+                                bk2 = st.number_input("Total Volume:", value=float(vol_2), step=100.0, key="bkg2")
                                 current_state['bkg2'] = bk2
 
                             jum2 = hk2 * bk2
@@ -832,10 +875,10 @@ try:
                             
                             c_hk3, c_bk3 = st.columns(2)
                             with c_hk3:
-                                hk3 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg3', tarif_per_unit)), step=10.0, key="hkg3")
+                                hk3 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg3")
                                 current_state['hkg3'] = hk3
                             with c_bk3:
-                                bk3 = st.number_input("Total Volume:", value=float(get_val('bkg3', vol_3)), step=100.0, key="bkg3")
+                                bk3 = st.number_input("Total Volume:", value=float(vol_3), step=100.0, key="bkg3")
                                 current_state['bkg3'] = bk3
 
                             jum3 = hk3 * bk3
