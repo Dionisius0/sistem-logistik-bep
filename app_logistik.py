@@ -3,6 +3,7 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import json
 from datetime import datetime
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE ---
@@ -45,29 +46,32 @@ st.set_page_config(page_title="Tango Logistik - Dasbor Operasional", layout="wid
 st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
 st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
-# --- DATABASE LOKAL (MEMORI APLIKASI) ---
+# --- DATABASE LOKAL & SISTEM AUTO-SAVE ---
 NAMA_FILE_DB = "database_invoice.csv"
 NAMA_FILE_JADWAL = "database_jadwal.csv"
+STATE_FILE_INPUTS = "auto_save_inputs.json"
 
-# Membuat file CSV kosong untuk Invoice jika belum ada
 if not os.path.exists(NAMA_FILE_DB):
-    df_kosong = pd.DataFrame(columns=[
-        "Waktu_Input", "Armada", "Total_Harga_Trip", 
-        "Klien_1", "Volume_1", "Tagihan_1", 
-        "Klien_2", "Volume_2", "Tagihan_2", 
-        "Klien_3", "Volume_3", "Tagihan_3"
-    ])
-    df_kosong.to_csv(NAMA_FILE_DB, index=False)
+    pd.DataFrame(columns=["Waktu_Input", "Armada", "Total_Harga_Trip", "Klien_1", "Volume_1", "Tagihan_1", "Klien_2", "Volume_2", "Tagihan_2", "Klien_3", "Volume_3", "Tagihan_3"]).to_csv(NAMA_FILE_DB, index=False)
 
-# Membuat file CSV kosong untuk Jadwal jika belum ada
 if not os.path.exists(NAMA_FILE_JADWAL):
-    df_jadwal_kosong = pd.DataFrame(columns=[
-        "Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip",
-        "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"
-    ])
-    df_jadwal_kosong.to_csv(NAMA_FILE_JADWAL, index=False)
+    pd.DataFrame(columns=["Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip", "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"]).to_csv(NAMA_FILE_JADWAL, index=False)
 
-# Membaca data invoice yang sudah tersimpan
+# Mengambil ingatan kotak isian sebelumnya
+if os.path.exists(STATE_FILE_INPUTS):
+    try:
+        with open(STATE_FILE_INPUTS, "r") as f:
+            saved_state = json.load(f)
+    except:
+        saved_state = {}
+else:
+    saved_state = {}
+
+current_state = {}
+
+def get_val(key, default):
+    return saved_state.get(key, default)
+
 existing_data = pd.read_csv(NAMA_FILE_DB)
 
 try:
@@ -94,8 +98,7 @@ try:
         if 'sambas' in teks: return 'Sambas'
         if 'singkawang' in teks: return 'Singkawang'
         if 'pontianak' in teks: return 'Pontianak'
-        if teks in ['none', 'nan', 'berangkat', 'tujuan'] or 'keberangkatan' in teks: 
-            return None
+        if teks in ['none', 'nan', 'berangkat', 'tujuan'] or 'keberangkatan' in teks: return None
         return str(teks).title() 
 
     kolom_awal = data_rute.columns[0]
@@ -147,13 +150,11 @@ try:
 
     # --- BAGIAN 3: NAVIGASI ---
     st.sidebar.title("🧭 Menu Navigasi")
-    menu_halaman = st.sidebar.radio("Pilih Halaman Analisis:", [
-        "📊 Kalkulator BEP (Utama)", 
-        "🎯 Target Laba & Jadwal Operasi",
-        "📈 Dashboard Eksekutif & KPI",
-        "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)",
-        "🏦 Keuangan Lanjutan & Aset"
-    ])
+    opsi_menu = ["📊 Kalkulator BEP (Utama)", "🎯 Target Laba & Jadwal Operasi", "📈 Dashboard Eksekutif & KPI", "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)", "🏦 Keuangan Lanjutan & Aset"]
+    def_menu = get_val('menu_halaman', opsi_menu[0])
+    if def_menu not in opsi_menu: def_menu = opsi_menu[0]
+    menu_halaman = st.sidebar.radio("Pilih Halaman Analisis:", opsi_menu, index=opsi_menu.index(def_menu))
+    current_state['menu_halaman'] = menu_halaman
     st.sidebar.markdown("---")
 
     # =====================================================================
@@ -162,7 +163,11 @@ try:
     if menu_halaman == "📊 Kalkulator BEP (Utama)":
         st.sidebar.header("⚙️ Pengaturan Data Rute")
         pilihan_mobil_list = data_mobil['Tipe Mobil'].dropna().unique().tolist()
-        mobil_terpilih_bep = st.sidebar.selectbox("Pilih Armada (Spesifikasi):", pilihan_mobil_list)
+        
+        def_mobil_bep = get_val('mobil_terpilih_bep', pilihan_mobil_list[0])
+        if def_mobil_bep not in pilihan_mobil_list: def_mobil_bep = pilihan_mobil_list[0]
+        mobil_terpilih_bep = st.sidebar.selectbox("Pilih Armada (Spesifikasi):", pilihan_mobil_list, index=pilihan_mobil_list.index(def_mobil_bep))
+        current_state['mobil_terpilih_bep'] = mobil_terpilih_bep
         
         data_rute_spesifik = data_rute.copy()
         if 'tronton' in str(mobil_terpilih_bep).lower() and 'tujuan' in kolom_rute_lower:
@@ -171,12 +176,20 @@ try:
         
         pilihan_berangkat = sorted(data_rute_spesifik['Titik Keberangkatan Bersih'].unique().tolist())
         if not pilihan_berangkat: pilihan_berangkat = sorted(data_rute['Titik Keberangkatan Bersih'].unique().tolist())
-        berangkat_terpilih = st.sidebar.selectbox("Titik Keberangkatan:", pilihan_berangkat)
+        
+        def_brgkt = get_val('berangkat_terpilih', pilihan_berangkat[0])
+        if def_brgkt not in pilihan_berangkat: def_brgkt = pilihan_berangkat[0]
+        berangkat_terpilih = st.sidebar.selectbox("Titik Keberangkatan:", pilihan_berangkat, index=pilihan_berangkat.index(def_brgkt))
+        current_state['berangkat_terpilih'] = berangkat_terpilih
+
         rute_terfilter = data_rute_spesifik[data_rute_spesifik['Titik Keberangkatan Bersih'] == berangkat_terpilih]
         
         if 'tujuan' in kolom_rute_lower:
             pilihan_tujuan = rute_terfilter[nama_tujuan].dropna().unique().tolist()
-            tujuan_terpilih = st.sidebar.selectbox("Rute Tujuan:", pilihan_tujuan)
+            def_tjn = get_val('tujuan_terpilih', pilihan_tujuan[0]) if pilihan_tujuan else None
+            if def_tjn not in pilihan_tujuan and pilihan_tujuan: def_tjn = pilihan_tujuan[0]
+            tujuan_terpilih = st.sidebar.selectbox("Rute Tujuan:", pilihan_tujuan, index=pilihan_tujuan.index(def_tjn) if def_tjn else 0)
+            current_state['tujuan_terpilih'] = tujuan_terpilih
             rute_tujuan_saja = rute_terfilter[rute_terfilter[nama_tujuan] == tujuan_terpilih]
         else:
             tujuan_terpilih = "Semua Rute"
@@ -184,7 +197,10 @@ try:
 
         if nama_kol_tipe and not rute_tujuan_saja.empty:
             pilihan_kategori = rute_tujuan_saja[nama_kol_tipe].dropna().unique().tolist()
-            kategori_terpilih = st.sidebar.selectbox("Kategori Kendaraan:", pilihan_kategori)
+            def_kat = get_val('kategori_terpilih', pilihan_kategori[0])
+            if def_kat not in pilihan_kategori: def_kat = pilihan_kategori[0]
+            kategori_terpilih = st.sidebar.selectbox("Kategori Kendaraan:", pilihan_kategori, index=pilihan_kategori.index(def_kat))
+            current_state['kategori_terpilih'] = kategori_terpilih
             detail_rute_final = rute_tujuan_saja[rute_tujuan_saja[nama_kol_tipe] == kategori_terpilih]
         else:
             detail_rute_final = rute_tujuan_saja
@@ -208,9 +224,12 @@ try:
         col1, col2 = st.columns(2)
         with col1:
             st.info("💡 Input Data Keuangan")
-            biaya_tetap = st.number_input("Total Biaya Tetap (Rp):", min_value=0.0, value=float(def_tetap), step=100000.0)
-            biaya_variabel = st.number_input("Total Cost per Trip (Rp):", min_value=0.0, value=float(def_var), step=10000.0)
-            harga_jual = st.number_input("Harga/Pendapatan per Trip (Rp):", min_value=0.0, value=float(def_harga), step=50000.0)
+            biaya_tetap = st.number_input("Total Biaya Tetap (Rp):", min_value=0.0, value=float(get_val('biaya_tetap_bep', def_tetap)), step=100000.0)
+            current_state['biaya_tetap_bep'] = biaya_tetap
+            biaya_variabel = st.number_input("Total Cost per Trip (Rp):", min_value=0.0, value=float(get_val('biaya_var_bep', def_var)), step=10000.0)
+            current_state['biaya_var_bep'] = biaya_variabel
+            harga_jual = st.number_input("Harga/Pendapatan per Trip (Rp):", min_value=0.0, value=float(get_val('harga_jual_bep', def_harga)), step=50000.0)
+            current_state['harga_jual_bep'] = harga_jual
         with col2:
             st.success("📈 Hasil Analisis BEP")
             if harga_jual > biaya_variabel:
@@ -221,15 +240,17 @@ try:
                 st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
     # =====================================================================
-    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL (UPDATE MEMORI)
+    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL
     # =====================================================================
     elif menu_halaman == "🎯 Target Laba & Jadwal Operasi":
         st.subheader("🎯 Analisis Patokan Target Laba")
         col_t1, col_t2 = st.columns([1, 2])
         with col_t1:
             st.info("💰 1. Tentukan Target Keuntungan")
-            target_laba = st.number_input("Target Laba Bulanan (Rp):", min_value=0.0, value=10000000.0, step=1000000.0)
-            biaya_tetap_global = st.number_input("Total Biaya Tetap Operasional (Rp):", value=float(estimasi_total_fixed), step=1000000.0)
+            target_laba = st.number_input("Target Laba Bulanan (Rp):", min_value=0.0, value=float(get_val('target_laba', 10000000.0)), step=1000000.0)
+            current_state['target_laba'] = target_laba
+            biaya_tetap_global = st.number_input("Total Biaya Tetap Operasional (Rp):", value=float(get_val('biaya_tetap_global', estimasi_total_fixed)), step=1000000.0)
+            current_state['biaya_tetap_global'] = biaya_tetap_global
         with col_t2:
             st.success("📊 2. Referensi Kebutuhan Trip per Rute")
             df_ref = df_rute_unik[['Label_Rute', 'Harga_Bersih', 'Cost_Bersih']].copy()
@@ -257,7 +278,11 @@ try:
         for i, hari in enumerate(hari_kerja):
             with kolom_hari[i % 3]:
                 st.markdown(f"### 🗓️ {hari}")
-                mobil_pilihan = st.multiselect(f"Pilih Armada:", daftar_armada_fisik, key=f"mobil_{hari}")
+                
+                def_mobils = get_val(f'mobil_{hari}', [])
+                def_mobils = [m for m in def_mobils if m in daftar_armada_fisik]
+                mobil_pilihan = st.multiselect(f"Pilih Armada:", daftar_armada_fisik, default=def_mobils, key=f"mobil_{hari}")
+                current_state[f'mobil_{hari}'] = mobil_pilihan
                 
                 for index, mobil in enumerate(mobil_pilihan):
                     tipe_spesifik = mobil.split(' - ')[1] if ' - ' in mobil else mobil
@@ -273,13 +298,22 @@ try:
                     with st.container(border=True):
                         st.markdown(f"""<p style="margin:0; color:#00d4ff; font-weight:bold;">↳ {mobil}</p>
                                     <p style="margin:0; font-size:0.8em; color:#888; margin-bottom:10px;">Golongan: {kategori_rute.title()}</p>""", unsafe_allow_html=True)
-                        rute_dipilih = st.selectbox("Tentukan Rute:", rute_terfilter_mobil_ini, key=f"rute_{hari}_{mobil}")
-                        jml_trip = st.number_input("Jml Trip:", min_value=1, value=1, step=1, key=f"trip_{hari}_{mobil}")
                         
-                        ada_muatan_balik = st.checkbox("📦 Ada Muatan Balik?", key=f"backhaul_{hari}_{mobil}")
+                        def_rute = get_val(f'rute_{hari}_{mobil}', rute_terfilter_mobil_ini[0])
+                        if def_rute not in rute_terfilter_mobil_ini: def_rute = rute_terfilter_mobil_ini[0]
+                        rute_dipilih = st.selectbox("Tentukan Rute:", rute_terfilter_mobil_ini, index=rute_terfilter_mobil_ini.index(def_rute), key=f"rute_{hari}_{mobil}")
+                        current_state[f'rute_{hari}_{mobil}'] = rute_dipilih
+                        
+                        jml_trip = st.number_input("Jml Trip:", min_value=1, value=int(get_val(f'trip_{hari}_{mobil}', 1)), step=1, key=f"trip_in_{hari}_{mobil}")
+                        current_state[f'trip_{hari}_{mobil}'] = jml_trip
+                        
+                        ada_muatan_balik = st.checkbox("📦 Ada Muatan Balik?", value=bool(get_val(f'backhaul_{hari}_{mobil}', False)), key=f"backhaul_in_{hari}_{mobil}")
+                        current_state[f'backhaul_{hari}_{mobil}'] = ada_muatan_balik
+                        
                         pendapatan_ekstra_bersih = 0.0
                         if ada_muatan_balik:
-                            pendapatan_ekstra_kotor = st.number_input("Harga Borongan Muatan Balik (Rp):", min_value=0.0, value=500000.0, step=100000.0, key=f"uang_balik_{hari}_{mobil}")
+                            pendapatan_ekstra_kotor = st.number_input("Harga Borongan Muatan Balik (Rp):", min_value=0.0, value=float(get_val(f'uang_balik_{hari}_{mobil}', 500000.0)), step=100000.0, key=f"uang_balik_in_{hari}_{mobil}")
+                            current_state[f'uang_balik_{hari}_{mobil}'] = pendapatan_ekstra_kotor
                             pendapatan_ekstra_bersih = pendapatan_ekstra_kotor * 0.55
                             st.caption(f"*Laba Bersih yang masuk: **Rp {pendapatan_ekstra_bersih:,.0f}** (55% dari borongan).*")
 
@@ -317,7 +351,7 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
-        # FITUR BARU: TOMBOL SIMPAN & UNDUH JADWAL
+        # FITUR DATABASE JADWAL
         st.markdown("---")
         st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
         col_dl, col_sv = st.columns(2)
@@ -331,7 +365,7 @@ try:
                 st.info("Pilih armada dan rute di atas untuk memunculkan tombol unduh.")
 
         with col_sv:
-            if st.button("🚀 SIMPAN JADWAL KE MEMORI LOKAL", type="primary"):
+            if st.button("🚀 MENCETAK JADWAL KE BUKU BESAR (CSV)", type="primary"):
                 if len(data_laporan_jadwal) > 0:
                     try:
                         waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -354,10 +388,10 @@ try:
                         df_gabungan_jadwal = pd.concat([df_jadwal_lama, df_jadwal_baru], ignore_index=True)
                         df_gabungan_jadwal.to_csv(NAMA_FILE_JADWAL, index=False)
                         
-                        st.success("✅ BERHASIL! Jadwal operasional telah direkam permanen ke dalam Database Lokal.")
+                        st.success("✅ BERHASIL! Jadwal operasional telah dicetak ke Laporan Database Lokal.")
                         st.balloons()
                     except Exception as e:
-                        st.error(f"❌ Gagal menyimpan jadwal: {e}")
+                        st.error(f"❌ Gagal merekam jadwal: {e}")
                 else:
                     st.warning("⚠️ Jadwal masih kosong. Silakan atur rute terlebih dahulu.")
 
@@ -376,12 +410,18 @@ try:
         col_nav1, col_nav2 = st.columns([1, 2])
         with col_nav1:
             st.info("🔍 Pilih Armada untuk Dievaluasi:")
-            armada_diperiksa = st.selectbox("Pilih Pelat Nomor:", daftar_armada_fisik)
+            def_armada_cek = get_val('armada_diperiksa', daftar_armada_fisik[0])
+            if def_armada_cek not in daftar_armada_fisik: def_armada_cek = daftar_armada_fisik[0]
+            armada_diperiksa = st.selectbox("Pilih Pelat Nomor:", daftar_armada_fisik, index=daftar_armada_fisik.index(def_armada_cek))
+            current_state['armada_diperiksa'] = armada_diperiksa
+
             pelat_saja = armada_diperiksa.split(' - ')[0] if ' - ' in armada_diperiksa else armada_diperiksa
             
             st.markdown("### 📊 Fleet Utilization")
             hari_kerja_sebulan = 26
-            trip_aktual = st.number_input("Total Trip armada ini bulan lalu:", min_value=0, value=20, step=1)
+            trip_aktual = st.number_input("Total Trip armada ini bulan lalu:", min_value=0, value=int(get_val('trip_aktual', 20)), step=1)
+            current_state['trip_aktual'] = trip_aktual
+
             utilitas = (trip_aktual / hari_kerja_sebulan) * 100
             
             if utilitas >= 80: st.success(f"Tingkat Utilitas: **{utilitas:.1f}%** (Sangat Baik)")
@@ -421,15 +461,22 @@ try:
         
         col_spj1, col_spj2 = st.columns([1, 1])
         with col_spj1:
-            rute_spj = st.selectbox("Pilih Rute untuk SPJ:", daftar_semua_rute)
+            def_spj = get_val('rute_spj', daftar_semua_rute[0])
+            if def_spj not in daftar_semua_rute: def_spj = daftar_semua_rute[0]
+            rute_spj = st.selectbox("Pilih Rute untuk SPJ:", daftar_semua_rute, index=daftar_semua_rute.index(def_spj))
+            current_state['rute_spj'] = rute_spj
+
             cost_rute_spj = df_rute_unik[df_rute_unik['Label_Rute'] == rute_spj]['Cost_Bersih'].values[0]
             st.metric("Total Biaya Variabel (Per Trip)", f"Rp {cost_rute_spj:,.0f}")
             
         with col_spj2:
             st.write("**Alokasi Persentase Uang Jalan:**")
-            pct_solar = st.slider("Solar / BBM (%)", 0, 100, 45)
-            pct_makan = st.slider("Uang Jajan Sopir & Kernet (%)", 0, 100, 25)
-            pct_parkir = st.slider("Parkir & Retribusi (%)", 0, 100, 10)
+            pct_solar = st.slider("Solar / BBM (%)", 0, 100, int(get_val('pct_solar', 45)))
+            current_state['pct_solar'] = pct_solar
+            pct_makan = st.slider("Uang Jajan Sopir & Kernet (%)", 0, 100, int(get_val('pct_makan', 25)))
+            current_state['pct_makan'] = pct_makan
+            pct_parkir = st.slider("Parkir & Retribusi (%)", 0, 100, int(get_val('pct_parkir', 10)))
+            current_state['pct_parkir'] = pct_parkir
             
             st.write("---")
             st.write("💵 **Rincian Uang yang Dibawa Supir:**")
@@ -449,7 +496,11 @@ try:
         with col_ton1:
             st.info("🚛 1. Parameter Kapasitas Armada")
             pilihan_mobil_list = data_mobil['Tipe Mobil'].dropna().unique().tolist()
-            armada_ton = st.selectbox("Pilih Tipe Armada:", pilihan_mobil_list)
+            
+            def_armada_ton = get_val('armada_ton', pilihan_mobil_list[0])
+            if def_armada_ton not in pilihan_mobil_list: def_armada_ton = pilihan_mobil_list[0]
+            armada_ton = st.selectbox("Pilih Tipe Armada:", pilihan_mobil_list, index=pilihan_mobil_list.index(def_armada_ton))
+            current_state['armada_ton'] = armada_ton
             
             tm_lower = str(armada_ton).lower()
             if 'pu' in tm_lower or 'pick' in tm_lower or 'l300' in tm_lower: 
@@ -465,7 +516,8 @@ try:
                 kategori_rute = 'truk standar'
                 default_tonase = 5.0
             
-            kapasitas_ton = st.number_input(f"Kapasitas Maksimal (Ton):", min_value=0.5, value=float(default_tonase), step=0.5)
+            kapasitas_ton = st.number_input(f"Kapasitas Maksimal (Ton):", min_value=0.5, value=float(get_val('kapasitas_ton', default_tonase)), step=0.5)
+            current_state['kapasitas_ton'] = kapasitas_ton
 
         with col_ton2:
             st.info("🛣️ 2. Parameter Rute & Jarak")
@@ -473,15 +525,19 @@ try:
             if not rute_terfilter_ton: 
                 rute_terfilter_ton = daftar_semua_rute
                 
-            rute_ton = st.selectbox("Pilih Rute Analisis:", rute_terfilter_ton)
-            
+            def_rute_ton = get_val('rute_ton', rute_terfilter_ton[0]) if rute_terfilter_ton else None
+            if def_rute_ton not in rute_terfilter_ton: def_rute_ton = rute_terfilter_ton[0] if rute_terfilter_ton else None
+            rute_ton = st.selectbox("Pilih Rute Analisis:", rute_terfilter_ton, index=rute_terfilter_ton.index(def_rute_ton) if def_rute_ton else 0)
+            current_state['rute_ton'] = rute_ton
+
             if rute_ton:
                 cost_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Cost_Bersih'].values[0]
                 harga_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Harga_Bersih'].values[0]
             else:
                 cost_rute_ton, harga_rute_ton = 0, 0
                 
-            jarak_km = st.number_input("Jarak Tempuh Rute (Kilometer):", min_value=1.0, value=150.0, step=10.0)
+            jarak_km = st.number_input("Jarak Tempuh Rute (Kilometer):", min_value=1.0, value=float(get_val('jarak_km', 150.0)), step=10.0)
+            current_state['jarak_km'] = jarak_km
 
         st.markdown("---")
         st.subheader("📈 Hasil Evaluasi Kinerja (Unit Economics)")
@@ -504,24 +560,27 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (LOKAL MEMORI)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (LOKAL MEMORI FULL OTOMATIS)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
         st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Memori Aktif)"])
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Auto-Save Aktif)"])
         
         with tab1:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
             col_ban1, col_ban2 = st.columns(2)
             with col_ban1:
-                harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=15000000.0, step=500000.0)
-                umur_ban_km = st.number_input("Estimasi Umur Ban (Kilometer):", min_value=1000.0, value=60000.0, step=5000.0)
+                harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=float(get_val('harga_set_ban', 15000000.0)), step=500000.0)
+                current_state['harga_set_ban'] = harga_set_ban
+                umur_ban_km = st.number_input("Estimasi Umur Ban (Kilometer):", min_value=1000.0, value=float(get_val('umur_ban_km', 60000.0)), step=5000.0)
+                current_state['umur_ban_km'] = umur_ban_km
             
             with col_ban2:
-                jarak_rute_trip = st.number_input("Jarak Tempuh Rute yang Sering Dilalui (KM per Trip PP):", min_value=10.0, value=300.0, step=10.0)
-                
+                jarak_rute_trip = st.number_input("Jarak Tempuh Rute yang Sering Dilalui (KM per Trip PP):", min_value=10.0, value=float(get_val('jarak_rute_trip', 300.0)), step=10.0)
+                current_state['jarak_rute_trip'] = jarak_rute_trip
+
             if umur_ban_km > 0:
                 biaya_ban_per_km = harga_set_ban / umur_ban_km
                 tabungan_per_trip = biaya_ban_per_km * jarak_rute_trip
@@ -534,10 +593,14 @@ try:
             st.markdown("### 💸 Simulator Kebutuhan Modal Kerja (*Working Capital*)")
             col_cash1, col_cash2 = st.columns(2)
             with col_cash1:
-                proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=250000000.0, step=10000000.0)
-                top_klien = st.selectbox("Rata-rata Klien Membayar Invoice (TOP):", [
-                    "0 Hari (Cash / Tunai Keras)", "14 Hari", "30 Hari (1 Bulan)", "60 Hari (2 Bulan)", "90 Hari (3 Bulan)"
-                ], index=2)
+                proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=float(get_val('proyeksi_biaya_bulanan', 250000000.0)), step=10000000.0)
+                current_state['proyeksi_biaya_bulanan'] = proyeksi_biaya_bulanan
+                
+                top_options = ["0 Hari (Cash / Tunai Keras)", "14 Hari", "30 Hari (1 Bulan)", "60 Hari (2 Bulan)", "90 Hari (3 Bulan)"]
+                def_top = get_val('top_klien', top_options[2])
+                if def_top not in top_options: def_top = top_options[2]
+                top_klien = st.selectbox("Rata-rata Klien Membayar Invoice (TOP):", top_options, index=top_options.index(def_top))
+                current_state['top_klien'] = top_klien
             
             angka_hari = int(top_klien.split(' ')[0])
             
@@ -549,34 +612,42 @@ try:
                 else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
         with tab3:
-            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Memori")
-            st.info("Setiap data yang disimpan di sini akan terekam ke dalam memori aplikasi dan tidak akan hilang meskipun browser ditutup (kecuali server tertidur).")
-            
-            # --- LOGIKA MEMORI INVOICE ---
-            last_row = existing_data.iloc[-1] if not existing_data.empty else None
+            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Laporan Invoice")
+            st.info("⚡ Setiap huruf dan angka yang diketik di kotak ini sudah otomatis tersimpan secara ajaib (Auto-Save).")
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
                 pilihan_mobil_list_inv = data_mobil['Tipe Mobil'].dropna().unique().tolist() if 'Tipe Mobil' in data_mobil.columns else ["Truk Default"]
-                def_armada = last_row['Armada'] if last_row is not None and last_row['Armada'] in pilihan_mobil_list_inv else pilihan_mobil_list_inv[0]
-                armada_inv = st.selectbox("Pilih Armada:", pilihan_mobil_list_inv, index=pilihan_mobil_list_inv.index(def_armada), key="armada_inv")
+                def_armada_inv = get_val('armada_inv', pilihan_mobil_list_inv[0])
+                if def_armada_inv not in pilihan_mobil_list_inv: def_armada_inv = pilihan_mobil_list_inv[0]
+                armada_inv = st.selectbox("Pilih Armada:", pilihan_mobil_list_inv, index=pilihan_mobil_list_inv.index(def_armada_inv))
+                current_state['armada_inv'] = armada_inv
+
             with col_inv2:
-                def_harga = float(last_row['Total_Harga_Trip']) if last_row is not None else 3000000.0
-                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=def_harga, step=100000.0)
+                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('harga_target_trip', 3000000.0)), step=100000.0)
+                current_state['harga_target_trip'] = harga_target_trip
+                
             with col_inv3:
-                kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=12000000.0, step=500000.0, format="%.0f")
+                kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=float(get_val('kapasitas_truk_inv', 12000000.0)), step=500000.0, format="%.0f")
+                current_state['kapasitas_truk_inv'] = kapasitas_truk_inv
 
             st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {armada_inv}:**")
             col_klien1, col_klien2, col_klien3 = st.columns(3)
             with col_klien1:
-                klien_1 = st.text_input("Nama Klien 1:", value=last_row['Klien_1'] if last_row is not None else "Perusahaan A")
-                vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=float(last_row['Volume_1']) if last_row is not None else 3000000.0, step=100000.0, format="%.0f")
+                klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "Perusahaan A"))
+                current_state['klien_1'] = klien_1
+                vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=float(get_val('vol_1', 3000000.0)), step=100000.0, format="%.0f")
+                current_state['vol_1'] = vol_1
             with col_klien2:
-                klien_2 = st.text_input("Nama Klien 2:", value=last_row['Klien_2'] if last_row is not None else "Perusahaan B")
-                vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=float(last_row['Volume_2']) if last_row is not None else 4000000.0, step=100000.0, format="%.0f")
+                klien_2 = st.text_input("Nama Klien 2:", value=get_val('klien_2', "Perusahaan B"))
+                current_state['klien_2'] = klien_2
+                vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=float(get_val('vol_2', 4000000.0)), step=100000.0, format="%.0f")
+                current_state['vol_2'] = vol_2
             with col_klien3:
-                klien_3 = st.text_input("Nama Klien 3:", value=last_row['Klien_3'] if last_row is not None else "Perusahaan C")
-                vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=float(last_row['Volume_3']) if last_row is not None else 2500000.0, step=100000.0, format="%.0f")
+                klien_3 = st.text_input("Nama Klien 3:", value=get_val('klien_3', "Perusahaan C"))
+                current_state['klien_3'] = klien_3
+                vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=float(get_val('vol_3', 2500000.0)), step=100000.0, format="%.0f")
+                current_state['vol_3'] = vol_3
             
             total_muatan_aktual = vol_1 + vol_2 + vol_3
             sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
@@ -600,8 +671,8 @@ try:
                     
                     st.markdown("---")
                     
-                    # SIMPAN KE DATABASE LOKAL
-                    if st.button("🚀 SIMPAN DATA KE MEMORI LOKAL", type="primary"):
+                    # FITUR DATABASE CSV
+                    if st.button("🚀 MENCETAK INVOICE KE BUKU BESAR (CSV)", type="primary"):
                         try:
                             new_data = pd.DataFrame([{
                                 "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -610,13 +681,10 @@ try:
                                 "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
                                 "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
                             }])
-                            
                             updated_df = pd.concat([existing_data, new_data], ignore_index=True)
                             updated_df.to_csv(NAMA_FILE_DB, index=False)
-                            
-                            st.success("✅ BERHASIL! Data telah tersimpan di memori aplikasi.")
+                            st.success("✅ BERHASIL! Invoice telah dicatat ke Laporan Database Lokal.")
                             st.balloons()
-                            st.rerun()
                         except Exception as e:
                             st.error(f"❌ Gagal menyimpan data: {e}")
 
@@ -624,17 +692,22 @@ try:
                     col_dl1, col_dl2, col_dl3 = st.columns(3)
                     
                     if vol_1 > 0:
-                        img_1 = buat_invoice_gambar(klien_1, armada_inv, vol_1, tagihan_1)
-                        col_dl1.download_button(label=f"📥 Unduh Foto {klien_1}", data=img_1, file_name=f"Invoice_{klien_1}.png", mime="image/png")
+                        col_dl1.download_button(label=f"📥 Unduh Foto {klien_1}", data=buat_invoice_gambar(klien_1, armada_inv, vol_1, tagihan_1), file_name=f"Invoice_{klien_1}.png", mime="image/png")
                     if vol_2 > 0:
-                        img_2 = buat_invoice_gambar(klien_2, armada_inv, vol_2, tagihan_2)
-                        col_dl2.download_button(label=f"📥 Unduh Foto {klien_2}", data=img_2, file_name=f"Invoice_{klien_2}.png", mime="image/png")
+                        col_dl2.download_button(label=f"📥 Unduh Foto {klien_2}", data=buat_invoice_gambar(klien_2, armada_inv, vol_2, tagihan_2), file_name=f"Invoice_{klien_2}.png", mime="image/png")
                     if vol_3 > 0:
-                        img_3 = buat_invoice_gambar(klien_3, armada_inv, vol_3, tagihan_3)
-                        col_dl3.download_button(label=f"📥 Unduh Foto {klien_3}", data=img_3, file_name=f"Invoice_{klien_3}.png", mime="image/png")
+                        col_dl3.download_button(label=f"📥 Unduh Foto {klien_3}", data=buat_invoice_gambar(klien_3, armada_inv, vol_3, tagihan_3), file_name=f"Invoice_{klien_3}.png", mime="image/png")
 
             else:
                 st.warning("Silakan masukkan volume muatan minimal untuk 1 klien.")
 
 except Exception as e:
     st.error(f"Waduh, ada masalah internal dengan file lokal: {e}")
+
+# --- EKSEKUSI AUTO-SAVE DI BELAKANG LAYAR ---
+saved_state.update(current_state)
+try:
+    with open(STATE_FILE_INPUTS, "w") as f:
+        json.dump(saved_state, f)
+except:
+    pass
