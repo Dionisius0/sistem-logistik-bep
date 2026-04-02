@@ -141,7 +141,7 @@ try:
     st.sidebar.markdown("---")
 
     # =====================================================================
-    # HAL halaman 1 s/d 4 dibiarkan persis sama seperti milikmu
+    # HALAMAN 1: KALKULATOR BEP
     # =====================================================================
     if menu_halaman == "📊 Kalkulator BEP (Utama)":
         st.sidebar.header("⚙️ Pengaturan Data Rute")
@@ -204,6 +204,9 @@ try:
             else:
                 st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
+    # =====================================================================
+    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL
+    # =====================================================================
     elif menu_halaman == "🎯 Target Laba & Jadwal Operasi":
         st.subheader("🎯 Analisis Patokan Target Laba")
         col_t1, col_t2 = st.columns([1, 2])
@@ -273,7 +276,7 @@ try:
                     total_trip_mingguan += jml_trip
                     
                     data_laporan_jadwal.append({
-                        "Hari": hari, "Armada": mobil, "Rute": rute_dipilih, "Jml Trip": jml_trip, 
+                        "Hari": Hari, "Armada": mobil, "Rute": rute_dipilih, "Jml Trip": jml_trip, 
                         "Pendapatan Utama": harga_rute_aktual * jml_trip, 
                         "Pendapatan Muatan Balik (Nett 55%)": pendapatan_ekstra_bersih * jml_trip,
                         "Total Biaya": cost_rute_aktual * jml_trip
@@ -303,6 +306,9 @@ try:
             csv_data = df_laporan.to_csv(index=False).encode('utf-8')
             st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
 
+    # =====================================================================
+    # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
+    # =====================================================================
     elif menu_halaman == "📈 Dashboard Eksekutif & KPI":
         st.subheader("📈 Pusat Kendali Operasional (Dashboard Eksekutif)")
         
@@ -377,6 +383,9 @@ try:
             st.write(f"- Parkir/Tol: **Rp {(cost_rute_spj * pct_parkir / 100):,.0f}**")
             st.write(f"💰 **Total Kas Bon Supir: Rp {(cost_rute_spj * (pct_solar+pct_makan+pct_parkir) / 100):,.0f}**")
 
+    # =====================================================================
+    # HALAMAN 4: ANALISIS UNIT ECONOMICS (TON-KM)
+    # =====================================================================
     elif menu_halaman == "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)":
         st.subheader("⚖️ Analisis Unit Economics (Metrik Ton-KM)")
         st.write("Mengevaluasi efisiensi rute dan armada berdasarkan jarak tempuh dan kapasitas beban maksimal.")
@@ -535,28 +544,34 @@ try:
                     
                     st.markdown("---")
                     
-                    # PERBAIKAN 2: Tombol Simpan dengan Spinner dan Clear Cache
+                    # 🔥 PERBAIKAN FATAL: MENGGUNAKAN METODE SUNTIK (APPEND)
                     if st.button("🚀 SIMPAN DATA SEKARANG (VERSI BARU)", type="primary"):
-                        with st.spinner("Sedang memproses penyimpanan data ke brankas..."):
+                        with st.spinner("Sedang menyuntikkan data langsung ke brankas..."):
                             try:
-                                new_data = pd.DataFrame([{
-                                    "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
-                                    "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
-                                    "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
-                                    "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
-                                }])
+                                # Mengambil alamat spreadsheet yang sudah pasti benar
+                                url_sheet = "https://docs.google.com/spreadsheets/d/1x4kg_lbCaFDKf-3sEKuUwy4ZknvetTP7e4DOh7MsS4g/edit"
                                 
-                                fresh_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
-                                fresh_data = fresh_data.dropna(how="all")
+                                # Menggunakan Gspread Client (bawaan st-gsheets) untuk menyisipkan data
+                                doc = conn.client.open_by_url(url_sheet)
+                                ws = doc.worksheet("Data_Invoice")
                                 
-                                updated_df = pd.concat([fresh_data, new_data], ignore_index=True)
-                                conn.update(worksheet="Data_Invoice", data=updated_df)
+                                # Data yang akan dikirim (urutan harus pas dengan A-L)
+                                data_baru = [
+                                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    armada_inv, float(harga_target_trip),
+                                    klien_1, float(vol_1), float(tagihan_1),
+                                    klien_2, float(vol_2), float(tagihan_2),
+                                    klien_3, float(vol_3), float(tagihan_3)
+                                ]
+                                
+                                # Suntik data ke baris paling bawah yang kosong!
+                                ws.append_row(data_baru)
                                 
                                 st.cache_data.clear()
-                                st.success("✅ BERHASIL! Data telah tersimpan dengan aman di Google Sheets Anda.")
+                                st.success("✅ BERHASIL SUNTIK DATA! Silakan cek Google Sheets-mu sekarang.")
+                                st.balloons() # Beri animasi meriah sebagai tanda sukses
                             except Exception as e:
-                                st.error(f"Gagal menyimpan ke Google Sheets: {e}")
+                                st.error(f"❌ Gagal menyimpan ke Google Sheets: {e}")
 
                     st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
                     col_dl1, col_dl2, col_dl3 = st.columns(3)
