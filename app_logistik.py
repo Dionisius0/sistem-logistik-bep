@@ -45,10 +45,11 @@ st.set_page_config(page_title="Tango Logistik - Dasbor Operasional", layout="wid
 st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
 st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
-# --- DATABASE LOKAL (PENGGANTI GOOGLE SHEETS) ---
+# --- DATABASE LOKAL (MEMORI APLIKASI) ---
 NAMA_FILE_DB = "database_invoice.csv"
+NAMA_FILE_JADWAL = "database_jadwal.csv"
 
-# Membuat file CSV kosong dengan nama kolom jika belum pernah ada
+# Membuat file CSV kosong untuk Invoice jika belum ada
 if not os.path.exists(NAMA_FILE_DB):
     df_kosong = pd.DataFrame(columns=[
         "Waktu_Input", "Armada", "Total_Harga_Trip", 
@@ -58,7 +59,15 @@ if not os.path.exists(NAMA_FILE_DB):
     ])
     df_kosong.to_csv(NAMA_FILE_DB, index=False)
 
-# Membaca data yang sudah tersimpan
+# Membuat file CSV kosong untuk Jadwal jika belum ada
+if not os.path.exists(NAMA_FILE_JADWAL):
+    df_jadwal_kosong = pd.DataFrame(columns=[
+        "Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip",
+        "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"
+    ])
+    df_jadwal_kosong.to_csv(NAMA_FILE_JADWAL, index=False)
+
+# Membaca data invoice yang sudah tersimpan
 existing_data = pd.read_csv(NAMA_FILE_DB)
 
 try:
@@ -212,7 +221,7 @@ try:
                 st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
     # =====================================================================
-    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL
+    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL (UPDATE MEMORI)
     # =====================================================================
     elif menu_halaman == "🎯 Target Laba & Jadwal Operasi":
         st.subheader("🎯 Analisis Patokan Target Laba")
@@ -308,10 +317,49 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
-        if len(data_laporan_jadwal) > 0:
-            df_laporan = pd.DataFrame(data_laporan_jadwal)
-            csv_data = df_laporan.to_csv(index=False).encode('utf-8')
-            st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
+        # FITUR BARU: TOMBOL SIMPAN & UNDUH JADWAL
+        st.markdown("---")
+        st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
+        col_dl, col_sv = st.columns(2)
+        
+        with col_dl:
+            if len(data_laporan_jadwal) > 0:
+                df_laporan = pd.DataFrame(data_laporan_jadwal)
+                csv_data = df_laporan.to_csv(index=False).encode('utf-8')
+                st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
+            else:
+                st.info("Pilih armada dan rute di atas untuk memunculkan tombol unduh.")
+
+        with col_sv:
+            if st.button("🚀 SIMPAN JADWAL KE MEMORI LOKAL", type="primary"):
+                if len(data_laporan_jadwal) > 0:
+                    try:
+                        waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        data_simpan = []
+                        for baris in data_laporan_jadwal:
+                            data_simpan.append({
+                                "Waktu_Simpan": waktu_sekarang,
+                                "Hari": baris["Hari"],
+                                "Armada": baris["Armada"],
+                                "Rute": baris["Rute"],
+                                "Jml_Trip": baris["Jml Trip"],
+                                "Pendapatan_Utama": baris["Pendapatan Utama"],
+                                "Pendapatan_Backhaul": baris["Pendapatan Muatan Balik (Nett 55%)"],
+                                "Total_Biaya": baris["Total Biaya"]
+                            })
+                            
+                        df_jadwal_baru = pd.DataFrame(data_simpan)
+                        df_jadwal_lama = pd.read_csv(NAMA_FILE_JADWAL)
+                        
+                        df_gabungan_jadwal = pd.concat([df_jadwal_lama, df_jadwal_baru], ignore_index=True)
+                        df_gabungan_jadwal.to_csv(NAMA_FILE_JADWAL, index=False)
+                        
+                        st.success("✅ BERHASIL! Jadwal operasional telah direkam permanen ke dalam Database Lokal.")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Gagal menyimpan jadwal: {e}")
+                else:
+                    st.warning("⚠️ Jadwal masih kosong. Silakan atur rute terlebih dahulu.")
 
     # =====================================================================
     # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
@@ -504,7 +552,7 @@ try:
             st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Memori")
             st.info("Setiap data yang disimpan di sini akan terekam ke dalam memori aplikasi dan tidak akan hilang meskipun browser ditutup (kecuali server tertidur).")
             
-            # --- LOGIKA MEMORI: Mengambil baris terakhir dari CSV ---
+            # --- LOGIKA MEMORI INVOICE ---
             last_row = existing_data.iloc[-1] if not existing_data.empty else None
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
@@ -555,7 +603,6 @@ try:
                     # SIMPAN KE DATABASE LOKAL
                     if st.button("🚀 SIMPAN DATA KE MEMORI LOKAL", type="primary"):
                         try:
-                            # Buat data baru yang akan dimasukkan
                             new_data = pd.DataFrame([{
                                 "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
@@ -564,10 +611,7 @@ try:
                                 "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
                             }])
                             
-                            # Menggabungkan data lama dan baru
                             updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-                            
-                            # Menyimpan langsung ke dalam server (file CSV)
                             updated_df.to_csv(NAMA_FILE_DB, index=False)
                             
                             st.success("✅ BERHASIL! Data telah tersimpan di memori aplikasi.")
