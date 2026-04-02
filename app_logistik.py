@@ -48,12 +48,11 @@ st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 # --- KONEKSI GOOGLE SHEETS (DATABASE MEMORI) ---
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    # PERBAIKAN 1: Tambahkan ttl=0 agar Streamlit tidak pakai ingatan malas
     existing_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
     existing_data = existing_data.dropna(how="all")
 except Exception as e:
     existing_data = pd.DataFrame()
-    st.sidebar.warning("Memori Google Sheets belum terhubung di lokal. Fitur penyimpanan dinonaktifkan sementara.")
+    st.sidebar.warning("Memori Google Sheets belum terhubung. Fitur penyimpanan dinonaktifkan sementara.")
 
 try:
     # --- BAGIAN 2: Membaca Semua Data CSV Lokal ---
@@ -142,7 +141,7 @@ try:
     st.sidebar.markdown("---")
 
     # =====================================================================
-    # HALAMAN 1: KALKULATOR BEP
+    # HAL halaman 1 s/d 4 dibiarkan persis sama seperti milikmu
     # =====================================================================
     if menu_halaman == "📊 Kalkulator BEP (Utama)":
         st.sidebar.header("⚙️ Pengaturan Data Rute")
@@ -205,9 +204,6 @@ try:
             else:
                 st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
-    # =====================================================================
-    # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL
-    # =====================================================================
     elif menu_halaman == "🎯 Target Laba & Jadwal Operasi":
         st.subheader("🎯 Analisis Patokan Target Laba")
         col_t1, col_t2 = st.columns([1, 2])
@@ -307,9 +303,6 @@ try:
             csv_data = df_laporan.to_csv(index=False).encode('utf-8')
             st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
 
-    # =====================================================================
-    # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
-    # =====================================================================
     elif menu_halaman == "📈 Dashboard Eksekutif & KPI":
         st.subheader("📈 Pusat Kendali Operasional (Dashboard Eksekutif)")
         
@@ -384,9 +377,6 @@ try:
             st.write(f"- Parkir/Tol: **Rp {(cost_rute_spj * pct_parkir / 100):,.0f}**")
             st.write(f"💰 **Total Kas Bon Supir: Rp {(cost_rute_spj * (pct_solar+pct_makan+pct_parkir) / 100):,.0f}**")
 
-    # =====================================================================
-    # HALAMAN 4: ANALISIS UNIT ECONOMICS (TON-KM)
-    # =====================================================================
     elif menu_halaman == "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)":
         st.subheader("⚖️ Analisis Unit Economics (Metrik Ton-KM)")
         st.write("Mengevaluasi efisiensi rute dan armada berdasarkan jarak tempuh dan kapasitas beban maksimal.")
@@ -494,12 +484,10 @@ try:
                 elif angka_hari > 30: st.error(f"🚨 Siapkan minimal **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk talangan.")
                 else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
-        # --- ISI TAB 3: INVOICE KONSOLIDASI (DENGAN MEMORI DATABASE) ---
         with tab3:
             st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Memori")
             st.info("Setiap data yang disimpan di sini akan terekam ke Google Sheets dan tidak akan hilang meskipun browser ditutup.")
             
-            # --- LOGIKA MEMORI: Mengambil baris terakhir dari Google Sheets ---
             last_row = existing_data.iloc[-1] if not existing_data.empty else None
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
@@ -547,9 +535,9 @@ try:
                     
                     st.markdown("---")
                     
-                    # PERBAIKAN 2: Tombol Simpan ke Google Sheets dengan Spinner dan Clear Cache
-                    if st.button("💾 SIMPAN DATA KE DATABASE PERMANEN", type="primary"):
-                        with st.spinner("Sedang memproses penyimpanan data..."):
+                    # PERBAIKAN 2: Tombol Simpan dengan Spinner dan Clear Cache
+                    if st.button("🚀 SIMPAN DATA SEKARANG (VERSI BARU)", type="primary"):
+                        with st.spinner("Sedang memproses penyimpanan data ke brankas..."):
                             try:
                                 new_data = pd.DataFrame([{
                                     "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -559,16 +547,13 @@ try:
                                     "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
                                 }])
                                 
-                                # Tarik data ter-update tepat sebelum menyimpan
                                 fresh_data = conn.read(worksheet="Data_Invoice", usecols=list(range(12)), ttl=0)
                                 fresh_data = fresh_data.dropna(how="all")
                                 
                                 updated_df = pd.concat([fresh_data, new_data], ignore_index=True)
                                 conn.update(worksheet="Data_Invoice", data=updated_df)
                                 
-                                # Menghapus memori agar Streamlit membaca data baru saat selesai
                                 st.cache_data.clear()
-                                
                                 st.success("✅ BERHASIL! Data telah tersimpan dengan aman di Google Sheets Anda.")
                             except Exception as e:
                                 st.error(f"Gagal menyimpan ke Google Sheets: {e}")
