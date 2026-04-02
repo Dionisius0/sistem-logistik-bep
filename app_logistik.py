@@ -25,7 +25,7 @@ def format_terbilang(n):
     hasil = terbilang(n).replace("  ", " ").strip()
     return f"{hasil} RUPIAH".upper()
 
-# --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL ---
+# --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL (B2B) ---
 def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_kg, banyak_kg):
     # Ukuran kanvas resolusi tinggi
     img = Image.new('RGB', (1000, 750), color=(255, 255, 255))
@@ -167,6 +167,7 @@ if not os.path.exists(NAMA_FILE_DB):
 if not os.path.exists(NAMA_FILE_JADWAL):
     pd.DataFrame(columns=["Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip", "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"]).to_csv(NAMA_FILE_JADWAL, index=False)
 
+# Mengambil ingatan kotak isian sebelumnya
 if os.path.exists(STATE_FILE_INPUTS):
     try:
         with open(STATE_FILE_INPUTS, "r") as f:
@@ -188,6 +189,13 @@ try:
     data_mobil = pd.read_csv("data mobil.csv", sep=None, engine="python")
     data_rute = pd.read_csv("BEP per trip.csv", sep=None, engine="python", skiprows=1)
     
+    try:
+        data_pajak = pd.read_csv("pajak mobil.csv", sep=None, engine="python")
+        data_susut = pd.read_csv("penyusutan kendaraan.csv", sep=None, engine="python")
+    except:
+        data_pajak = pd.DataFrame()
+        data_susut = pd.DataFrame()
+
     if 'Unnamed: 1' in data_rute.columns or 'Unnamed: 2' in data_rute.columns:
         data_rute.columns = data_rute.iloc[0] 
         data_rute = data_rute[1:].reset_index(drop=True) 
@@ -238,6 +246,11 @@ try:
     data_rute['Harga_Bersih'] = data_rute[col_harga].apply(bersihkan_rupiah) if col_harga else 1500000.0
     data_rute['Cost_Bersih'] = data_rute[col_cost].apply(bersihkan_rupiah) if col_cost else 500000.0
     data_rute['Fixed_Bersih'] = data_rute[col_fixed].apply(bersihkan_rupiah) if col_fixed else 5000000.0
+
+    if nama_kol_tipe:
+        data_rute['Label_Rute'] = data_rute['Titik Keberangkatan Bersih'].astype(str) + " ➡️ " + data_rute[nama_tujuan].astype(str) + " (" + data_rute[nama_kol_tipe].astype(str) + ")"
+    else:
+        data_rute['Label_Rute'] = data_rute['Titik Keberangkatan Bersih'].astype(str) + " ➡️ " + data_rute[nama_tujuan].astype(str)
 
     estimasi_total_fixed = data_rute['Fixed_Bersih'].max()
     if estimasi_total_fixed == 0: estimasi_total_fixed = 74898583.0
@@ -310,14 +323,17 @@ try:
         st.subheader(f"📊 Detail Operasional BEP: **{mobil_terpilih_bep}**")
         col_m, col_r = st.columns(2)
         with col_m:
+            st.write("**Data Spesifikasi Kendaraan:**")
             st.dataframe(data_mobil[data_mobil['Tipe Mobil'] == mobil_terpilih_bep])
         with col_r:
+            st.write(f"**Data Rute ({berangkat_terpilih} ➡️ {tujuan_terpilih}) - {kategori_terpilih}:**")
             st.dataframe(detail_rute_final.drop(columns=['Titik Keberangkatan Bersih', 'Label_Rute', 'Harga_Bersih', 'Cost_Bersih', 'Fixed_Bersih'], errors='ignore'))
         
         st.markdown("---")
         st.subheader("🧮 Kalkulator Break Even Point (BEP)")
         col1, col2 = st.columns(2)
         with col1:
+            st.info("💡 Input Data Keuangan")
             biaya_tetap = st.number_input("Total Biaya Tetap (Rp):", min_value=0.0, value=float(get_val('biaya_tetap_bep', def_tetap)), step=100000.0)
             current_state['biaya_tetap_bep'] = biaya_tetap
             biaya_variabel = st.number_input("Total Cost per Trip (Rp):", min_value=0.0, value=float(get_val('biaya_var_bep', def_var)), step=10000.0)
@@ -331,7 +347,7 @@ try:
                 bep_trip = biaya_tetap / margin
                 st.metric(label="Titik Impas (BEP) - Trip", value=f"{bep_trip:.1f} Trip")
             else:
-                st.error("⚠️ Harga per trip harus lebih besar dari biaya per trip!")
+                st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
     # =====================================================================
     # HALAMAN 2: TARGET LABA & JADWAL OPERASIONAL
@@ -340,11 +356,13 @@ try:
         st.subheader("🎯 Analisis Patokan Target Laba")
         col_t1, col_t2 = st.columns([1, 2])
         with col_t1:
+            st.info("💰 1. Tentukan Target Keuntungan")
             target_laba = st.number_input("Target Laba Bulanan (Rp):", min_value=0.0, value=float(get_val('target_laba', 10000000.0)), step=1000000.0)
             current_state['target_laba'] = target_laba
             biaya_tetap_global = st.number_input("Total Biaya Tetap Operasional (Rp):", value=float(get_val('biaya_tetap_global', estimasi_total_fixed)), step=1000000.0)
             current_state['biaya_tetap_global'] = biaya_tetap_global
         with col_t2:
+            st.success("📊 2. Referensi Kebutuhan Trip per Rute")
             df_ref = df_rute_unik[['Label_Rute', 'Harga_Bersih', 'Cost_Bersih']].copy()
             df_ref['Margin'] = df_ref['Harga_Bersih'] - df_ref['Cost_Bersih']
             df_ref = df_ref[df_ref['Margin'] > 0].copy() 
@@ -356,7 +374,8 @@ try:
         st.subheader("🗓️ 3. Perencanaan Jadwal Aktual Multi-Rute (Senin - Sabtu)")
         
         if 'No. Polisi' in data_mobil.columns:
-            daftar_armada_fisik = data_mobil.dropna(subset=['No. Polisi', 'Tipe Mobil']).apply(lambda row: f"{str(row['No. Polisi']).strip()} - {str(row['Tipe Mobil']).strip()}", axis=1).tolist()
+            data_valid = data_mobil.dropna(subset=['No. Polisi', 'Tipe Mobil'])
+            daftar_armada_fisik = data_valid.apply(lambda row: f"{str(row['No. Polisi']).strip()} - {str(row['Tipe Mobil']).strip()}", axis=1).tolist()
         else:
             daftar_armada_fisik = data_mobil['Tipe Mobil'].dropna().unique().tolist()
         
@@ -387,7 +406,8 @@ try:
                     if not rute_terfilter_mobil_ini: rute_terfilter_mobil_ini = daftar_semua_rute
 
                     with st.container(border=True):
-                        st.markdown(f"""<p style="margin:0; color:#00d4ff; font-weight:bold;">↳ {mobil}</p>""", unsafe_allow_html=True)
+                        st.markdown(f"""<p style="margin:0; color:#00d4ff; font-weight:bold;">↳ {mobil}</p>
+                                    <p style="margin:0; font-size:0.8em; color:#888; margin-bottom:10px;">Golongan: {kategori_rute.title()}</p>""", unsafe_allow_html=True)
                         
                         def_rute = get_val(f'rute_{hari}_{mobil}', rute_terfilter_mobil_ini[0])
                         if def_rute not in rute_terfilter_mobil_ini: def_rute = rute_terfilter_mobil_ini[0]
@@ -405,6 +425,7 @@ try:
                             pendapatan_ekstra_kotor = st.number_input("Harga Borongan Muatan Balik (Rp):", min_value=0.0, value=float(get_val(f'uang_balik_{hari}_{mobil}', 500000.0)), step=100000.0, key=f"uang_balik_in_{hari}_{mobil}")
                             current_state[f'uang_balik_{hari}_{mobil}'] = pendapatan_ekstra_kotor
                             pendapatan_ekstra_bersih = pendapatan_ekstra_kotor * 0.55
+                            st.caption(f"*Laba Bersih yang masuk: **Rp {pendapatan_ekstra_bersih:,.0f}** (55% dari borongan).*")
 
                     harga_rute_aktual = df_rute_unik[df_rute_unik['Label_Rute'] == rute_dipilih]['Harga_Bersih'].values[0]
                     cost_rute_aktual = df_rute_unik[df_rute_unik['Label_Rute'] == rute_dipilih]['Cost_Bersih'].values[0]
@@ -433,78 +454,231 @@ try:
         laba_rugi_aktual = total_pendapatan_bulanan - biaya_total_bulanan
         
         col_k1, col_k2, col_k3 = st.columns(3)
-        col_k1.metric("Proyeksi Total Pendapatan", f"Rp {total_pendapatan_bulanan:,.0f}")
+        col_k1.metric("Proyeksi Total Pendapatan", f"Rp {total_pendapatan_bulanan:,.0f}", f"+ Rp {pendapatan_backhaul_bulanan:,.0f} (Ekstra Muatan Balik)")
         col_k2.metric("Total Biaya", f"Rp {biaya_total_bulanan:,.0f}")
         
         if laba_rugi_aktual >= target_laba: col_k3.metric("🎉 Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
+        elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
-        st.markdown("---")
-        st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
-        col_dl, col_sv = st.columns(2)
-        
-        with col_dl:
-            if len(data_laporan_jadwal) > 0:
-                df_laporan = pd.DataFrame(data_laporan_jadwal)
-                csv_data = df_laporan.to_csv(index=False).encode('utf-8')
-                st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
-            else:
-                st.info("Pilih armada dan rute di atas untuk memunculkan tombol unduh.")
-
-        with col_sv:
-            if st.button("🚀 MENCETAK JADWAL KE BUKU BESAR (CSV)", type="primary"):
-                if len(data_laporan_jadwal) > 0:
-                    try:
-                        waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        data_simpan = []
-                        for baris in data_laporan_jadwal:
-                            data_simpan.append({
-                                "Waktu_Simpan": waktu_sekarang,
-                                "Hari": baris["Hari"], "Armada": baris["Armada"], "Rute": baris["Rute"],
-                                "Jml_Trip": baris["Jml Trip"], "Pendapatan_Utama": baris["Pendapatan Utama"],
-                                "Pendapatan_Backhaul": baris["Pendapatan Muatan Balik (Nett 55%)"], "Total_Biaya": baris["Total Biaya"]
-                            })
-                            
-                        df_jadwal_baru = pd.DataFrame(data_simpan)
-                        df_jadwal_lama = pd.read_csv(NAMA_FILE_JADWAL)
-                        
-                        df_gabungan_jadwal = pd.concat([df_jadwal_lama, df_jadwal_baru], ignore_index=True)
-                        df_gabungan_jadwal.to_csv(NAMA_FILE_JADWAL, index=False)
-                        st.success("✅ BERHASIL! Jadwal operasional telah dicetak ke Laporan Database Lokal.")
-                    except Exception as e:
-                        st.error(f"❌ Gagal merekam jadwal: {e}")
-
     # =====================================================================
-    # HALAMAN 3 & 4 (DIPERSINGKAT VISUALNYA AGAR MUAT, TAPI KODE TETAP ADA)
+    # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
     # =====================================================================
     elif menu_halaman == "📈 Dashboard Eksekutif & KPI":
-        st.subheader("📈 Pusat Kendali Operasional")
-        st.info("Fitur Dashboard berjalan normal seperti biasa.")
+        st.subheader("📈 Pusat Kendali Operasional (Dashboard Eksekutif)")
+        
+        if 'No. Polisi' in data_mobil.columns:
+            data_valid = data_mobil.dropna(subset=['No. Polisi', 'Tipe Mobil'])
+            daftar_armada_fisik = data_valid.apply(lambda row: f"{str(row['No. Polisi']).strip()} - {str(row['Tipe Mobil']).strip()}", axis=1).tolist()
+        else:
+            daftar_armada_fisik = ["Data pelat nomor tidak ditemukan"]
 
-    elif menu_halaman == "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)":
-        st.subheader("⚖️ Analisis Unit Economics")
-        st.info("Fitur Ton-KM berjalan normal seperti biasa.")
+        col_nav1, col_nav2 = st.columns([1, 2])
+        with col_nav1:
+            st.info("🔍 Pilih Armada untuk Dievaluasi:")
+            def_armada_cek = get_val('armada_diperiksa', daftar_armada_fisik[0])
+            if def_armada_cek not in daftar_armada_fisik: def_armada_cek = daftar_armada_fisik[0]
+            armada_diperiksa = st.selectbox("Pilih Pelat Nomor:", daftar_armada_fisik, index=daftar_armada_fisik.index(def_armada_cek))
+            current_state['armada_diperiksa'] = armada_diperiksa
+
+            pelat_saja = armada_diperiksa.split(' - ')[0] if ' - ' in armada_diperiksa else armada_diperiksa
+            
+            st.markdown("### 📊 Fleet Utilization")
+            hari_kerja_sebulan = 26
+            trip_aktual = st.number_input("Total Trip armada ini bulan lalu:", min_value=0, value=int(get_val('trip_aktual', 20)), step=1)
+            current_state['trip_aktual'] = trip_aktual
+
+            utilitas = (trip_aktual / hari_kerja_sebulan) * 100
+            
+            if utilitas >= 80: st.success(f"Tingkat Utilitas: **{utilitas:.1f}%** (Sangat Baik)")
+            elif utilitas >= 50: st.warning(f"Tingkat Utilitas: **{utilitas:.1f}%** (Perlu Ditingkatkan)")
+            else: st.error(f"Tingkat Utilitas: **{utilitas:.1f}%** (Aset Menganggur!)")
+
+        with col_nav2:
+            st.success("💼 Profil Aset & Total Cost of Ownership (TCO)")
+            status_pajak = "Data tidak ditemukan"
+            status_susut = "Data tidak ditemukan"
+            nilai_susut = 0.0
+            
+            if not data_pajak.empty:
+                baris_pajak = data_pajak[data_pajak.astype(str).apply(lambda x: x.str.contains(pelat_saja, case=False, na=False)).any(axis=1)]
+                if not baris_pajak.empty:
+                    col_total_pajak = baris_pajak.columns[-1]
+                    total_pajak = bersihkan_rupiah(baris_pajak.iloc[0][col_total_pajak])
+                    status_pajak = f"Rp {total_pajak:,.0f} / Tahun"
+            
+            if not data_susut.empty:
+                baris_susut = data_susut[data_susut.astype(str).apply(lambda x: x.str.contains(pelat_saja, case=False, na=False)).any(axis=1)]
+                if not baris_susut.empty:
+                    col_ket = next((c for c in baris_susut.columns if 'keterangan' in str(c).lower()), None)
+                    col_dep = next((c for c in baris_susut.columns if 'depresiasi' in str(c).lower()), None)
+                    if col_ket: status_susut = str(baris_susut.iloc[0][col_ket])
+                    if col_dep: nilai_susut = bersihkan_rupiah(baris_susut.iloc[0][col_dep])
+
+            st.write(f"**Status Kendaraan:** {status_susut}")
+            st.write(f"**Beban Penyusutan Tahunan:** Rp {nilai_susut:,.0f}")
+            st.write(f"**Estimasi Pajak Tahunan:** {status_pajak}")
+            
+            if 'lunas' in status_susut.lower() or 'mati' in status_susut.lower():
+                st.info("💡 **Rekomendasi Manajerial:** Nilai buku kendaraan ini sudah habis (Lunas). Pertimbangkan peremajaan unit.")
+
+        st.markdown("---")
+        st.subheader("🧾 Kalkulator Surat Perintah Jalan (SPJ) & Kas Bon Supir")
+        
+        col_spj1, col_spj2 = st.columns([1, 1])
+        with col_spj1:
+            def_spj = get_val('rute_spj', daftar_semua_rute[0])
+            if def_spj not in daftar_semua_rute: def_spj = daftar_semua_rute[0]
+            rute_spj = st.selectbox("Pilih Rute untuk SPJ:", daftar_semua_rute, index=daftar_semua_rute.index(def_spj))
+            current_state['rute_spj'] = rute_spj
+
+            cost_rute_spj = df_rute_unik[df_rute_unik['Label_Rute'] == rute_spj]['Cost_Bersih'].values[0]
+            st.metric("Total Biaya Variabel (Per Trip)", f"Rp {cost_rute_spj:,.0f}")
+            
+        with col_spj2:
+            st.write("**Alokasi Persentase Uang Jalan:**")
+            pct_solar = st.slider("Solar / BBM (%)", 0, 100, int(get_val('pct_solar', 45)))
+            current_state['pct_solar'] = pct_solar
+            pct_makan = st.slider("Uang Jajan Sopir & Kernet (%)", 0, 100, int(get_val('pct_makan', 25)))
+            current_state['pct_makan'] = pct_makan
+            pct_parkir = st.slider("Parkir & Retribusi (%)", 0, 100, int(get_val('pct_parkir', 10)))
+            current_state['pct_parkir'] = pct_parkir
+            
+            st.write("---")
+            st.write("💵 **Rincian Uang yang Dibawa Supir:**")
+            st.write(f"- Uang Solar: **Rp {(cost_rute_spj * pct_solar / 100):,.0f}**")
+            st.write(f"- Uang Makan: **Rp {(cost_rute_spj * pct_makan / 100):,.0f}**")
+            st.write(f"- Parkir/Tol: **Rp {(cost_rute_spj * pct_parkir / 100):,.0f}**")
+            st.write(f"💰 **Total Kas Bon Supir: Rp {(cost_rute_spj * (pct_solar+pct_makan+pct_parkir) / 100):,.0f}**")
 
     # =====================================================================
-    # HALAMAN 5: INVOICE FORMAL
+    # HALAMAN 4: ANALISIS UNIT ECONOMICS (TON-KM)
+    # =====================================================================
+    elif menu_halaman == "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)":
+        st.subheader("⚖️ Analisis Unit Economics (Metrik Ton-KM)")
+        st.write("Mengevaluasi efisiensi rute dan armada berdasarkan jarak tempuh dan kapasitas beban maksimal.")
+
+        col_ton1, col_ton2 = st.columns(2)
+        with col_ton1:
+            st.info("🚛 1. Parameter Kapasitas Armada")
+            pilihan_mobil_list = data_mobil['Tipe Mobil'].dropna().unique().tolist()
+            
+            def_armada_ton = get_val('armada_ton', pilihan_mobil_list[0])
+            if def_armada_ton not in pilihan_mobil_list: def_armada_ton = pilihan_mobil_list[0]
+            armada_ton = st.selectbox("Pilih Tipe Armada:", pilihan_mobil_list, index=pilihan_mobil_list.index(def_armada_ton))
+            current_state['armada_ton'] = armada_ton
+            
+            tm_lower = str(armada_ton).lower()
+            if 'pu' in tm_lower or 'pick' in tm_lower or 'l300' in tm_lower: 
+                kategori_rute = 'pick up'
+                default_tonase = 1.5
+            elif '71' in tm_lower or '100' in tm_lower or 'engkel' in tm_lower: 
+                kategori_rute = 'engkel'
+                default_tonase = 2.5
+            elif 'tronton' in tm_lower: 
+                kategori_rute = 'tronton'
+                default_tonase = 15.0
+            else: 
+                kategori_rute = 'truk standar'
+                default_tonase = 5.0
+            
+            kapasitas_ton = st.number_input(f"Kapasitas Maksimal (Ton):", min_value=0.5, value=float(get_val('kapasitas_ton', default_tonase)), step=0.5)
+            current_state['kapasitas_ton'] = kapasitas_ton
+
+        with col_ton2:
+            st.info("🛣️ 2. Parameter Rute & Jarak")
+            rute_terfilter_ton = [r for r in daftar_semua_rute if kategori_rute in str(r).lower()]
+            if not rute_terfilter_ton: 
+                rute_terfilter_ton = daftar_semua_rute
+                
+            def_rute_ton = get_val('rute_ton', rute_terfilter_ton[0]) if rute_terfilter_ton else None
+            if def_rute_ton not in rute_terfilter_ton: def_rute_ton = rute_terfilter_ton[0] if rute_terfilter_ton else None
+            rute_ton = st.selectbox("Pilih Rute Analisis:", rute_terfilter_ton, index=rute_terfilter_ton.index(def_rute_ton) if def_rute_ton else 0)
+            current_state['rute_ton'] = rute_ton
+
+            if rute_ton:
+                cost_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Cost_Bersih'].values[0]
+                harga_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Harga_Bersih'].values[0]
+            else:
+                cost_rute_ton, harga_rute_ton = 0, 0
+                
+            jarak_km = st.number_input("Jarak Tempuh Rute (Kilometer):", min_value=1.0, value=float(get_val('jarak_km', 150.0)), step=10.0)
+            current_state['jarak_km'] = jarak_km
+
+        st.markdown("---")
+        st.subheader("📈 Hasil Evaluasi Kinerja (Unit Economics)")
+        
+        if rute_ton and jarak_km > 0 and kapasitas_ton > 0:
+            ton_km_total = kapasitas_ton * jarak_km
+            biaya_per_ton_km = cost_rute_ton / ton_km_total
+            pendapatan_per_ton_km = harga_rute_ton / ton_km_total
+            margin_per_ton_km = pendapatan_per_ton_km - biaya_per_ton_km
+
+            col_res1, col_res2, col_res3 = st.columns(3)
+            col_res1.metric("Biaya Operasional per Ton-KM", f"Rp {biaya_per_ton_km:,.0f}")
+            col_res2.metric("Pendapatan per Ton-KM", f"Rp {pendapatan_per_ton_km:,.0f}")
+            
+            if margin_per_ton_km > 0:
+                col_res3.metric("✅ Margin per Ton-KM", f"Rp {margin_per_ton_km:,.0f}")
+                st.success(f"💡 **Kesimpulan Bisnis:** Untuk setiap 1 Ton barang dipindahkan 1 Kilometer menggunakan {armada_ton}, modal yang keluar **Rp {biaya_per_ton_km:,.0f}** dan laba bersih **Rp {margin_per_ton_km:,.0f}**.")
+            else:
+                col_res3.metric("🚨 Margin per Ton-KM (RUGI)", f"Rp {margin_per_ton_km:,.0f}")
+                st.error("⚠️ **Peringatan:** Armada ini terlalu boros untuk jarak sejauh ini dengan kapasitas tersebut.")
+
+    # =====================================================================
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (INVOICE FORMAL)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
         
-        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Pembuat Invoice Formal (Format Resmi)"])
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Cetak Invoice Formal"])
         
         with tab1:
-            st.markdown("### 🛞 Manajemen Keausan Ban")
-            st.info("Fitur Ban berjalan otomatis dan tersimpan (Auto-Save).")
+            st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
+            col_ban1, col_ban2 = st.columns(2)
+            with col_ban1:
+                harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=float(get_val('harga_set_ban', 15000000.0)), step=500000.0)
+                current_state['harga_set_ban'] = harga_set_ban
+                umur_ban_km = st.number_input("Estimasi Umur Ban (Kilometer):", min_value=1000.0, value=float(get_val('umur_ban_km', 60000.0)), step=5000.0)
+                current_state['umur_ban_km'] = umur_ban_km
+            
+            with col_ban2:
+                jarak_rute_trip = st.number_input("Jarak Tempuh Rute yang Sering Dilalui (KM per Trip PP):", min_value=10.0, value=float(get_val('jarak_rute_trip', 300.0)), step=10.0)
+                current_state['jarak_rute_trip'] = jarak_rute_trip
+
+            if umur_ban_km > 0:
+                biaya_ban_per_km = harga_set_ban / umur_ban_km
+                tabungan_per_trip = biaya_ban_per_km * jarak_rute_trip
+                
+                st.write("---")
+                st.metric("Biaya Keausan Ban per Kilometer", f"Rp {biaya_ban_per_km:,.0f} / KM")
+                st.success(f"💡 Anda wajib menyisihkan **Rp {tabungan_per_trip:,.0f}** setiap kali truk menyelesaikan rute sejauh {jarak_rute_trip} KM ini.")
 
         with tab2:
-            st.markdown("### 💸 Simulator Kebutuhan Modal Kerja")
-            st.info("Fitur Arus Kas berjalan otomatis dan tersimpan (Auto-Save).")
+            st.markdown("### 💸 Simulator Kebutuhan Modal Kerja (*Working Capital*)")
+            col_cash1, col_cash2 = st.columns(2)
+            with col_cash1:
+                proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=float(get_val('proyeksi_biaya_bulanan', 250000000.0)), step=10000000.0)
+                current_state['proyeksi_biaya_bulanan'] = proyeksi_biaya_bulanan
+                
+                top_options = ["0 Hari (Cash / Tunai Keras)", "14 Hari", "30 Hari (1 Bulan)", "60 Hari (2 Bulan)", "90 Hari (3 Bulan)"]
+                def_top = get_val('top_klien', top_options[2])
+                if def_top not in top_options: def_top = top_options[2]
+                top_klien = st.selectbox("Rata-rata Klien Membayar Invoice (TOP):", top_options, index=top_options.index(def_top))
+                current_state['top_klien'] = top_klien
+            
+            angka_hari = int(top_klien.split(' ')[0])
+            
+            with col_cash2:
+                kebutuhan_modal_kerja = (proyeksi_biaya_bulanan / 30) * angka_hari
+                st.metric("Dana Tunai (Modal Kerja) yang Harus Disiapkan", f"Rp {kebutuhan_modal_kerja:,.0f}")
+                if angka_hari == 0: st.success("✅ Bisnis yang sangat sehat! Klien membayar tunai.")
+                elif angka_hari > 30: st.error(f"🚨 Siapkan minimal **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk talangan.")
+                else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
-        # --- ISI TAB 3: PEMBUAT INVOICE FORMAL (BARU) ---
         with tab3:
             st.markdown("### 🧾 Form Cetak Invoice Profesional")
-            st.info("Kertas tagihan ini telah disesuaikan dengan format resmi perusahaan. Sistem akan menghitung otomatis Jumlah, PPN, dan Terbilang (Ejaan Rupiah).")
+            st.info("⚡ Setiap huruf dan angka yang diketik di kotak ini otomatis tersimpan (Auto-Save).")
             
             col_inv1, col_inv2 = st.columns(2)
             with col_inv1:
@@ -526,7 +700,7 @@ try:
             st.markdown("#### 📝 Detail Tagihan")
             col_tag1, col_tag2, col_tag3 = st.columns([2, 1, 1])
             with col_tag1:
-                keterangan = st.text_input("Keterangan Pekerjaan:", value=get_val('keterangan_formal', "Biaya angkut barang Fortune Pillow Pack 500 ml x 24 Bags"))
+                keterangan = st.text_input("Keterangan Pekerjaan:", value=get_val('keterangan_formal', "Biaya angkut barang Fortune Pillow Pack 500 ml x 24 Bags (SPK No.2080744206)"))
                 current_state['keterangan_formal'] = keterangan
             with col_tag2:
                 harga_kg = st.number_input("Harga / KG (Rp):", min_value=0.0, value=float(get_val('harga_kg', 325.0)), step=10.0)
@@ -535,7 +709,6 @@ try:
                 banyak_kg = st.number_input("Banyaknya / KG:", min_value=0.0, value=float(get_val('banyak_kg', 11440.0)), step=100.0)
                 current_state['banyak_kg'] = banyak_kg
 
-            # MATEMATIKA OTOMATIS
             jumlah = harga_kg * banyak_kg
             ppn = jumlah * 0.11
             total_akhir = jumlah + ppn
@@ -552,26 +725,25 @@ try:
             
             st.markdown("---")
             
-            col_dl_inv, col_sv_inv = st.columns(2)
-            with col_dl_inv:
-                img_formal = buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_kg, banyak_kg)
-                st.download_button(label="🖨️ UNDUH GAMBAR INVOICE (SIAP CETAK)", data=img_formal, file_name=f"{no_invoice}_{nama_klien}.png", mime="image/png", type="primary")
+            # FITUR DATABASE CSV
+            if st.button("🚀 MENCETAK INVOICE KE BUKU BESAR (CSV)", type="primary"):
+                try:
+                    new_data = pd.DataFrame([{
+                        "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "No_Invoice": no_invoice, "Nama_Klien": nama_klien,
+                        "Keterangan": keterangan, "Harga_KG": harga_kg, "Banyaknya_KG": banyak_kg,
+                        "Jumlah": jumlah, "PPN": ppn, "Total_Akhir": total_akhir
+                    }])
+                    updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+                    updated_df.to_csv(NAMA_FILE_DB, index=False)
+                    st.success("✅ BERHASIL! Invoice telah dicatat ke Laporan Database Lokal.")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"❌ Gagal menyimpan data: {e}")
 
-            with col_sv_inv:
-                if st.button("💾 SIMPAN KE BUKU BESAR INVOICE (CSV)", type="secondary"):
-                    try:
-                        new_data = pd.DataFrame([{
-                            "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "No_Invoice": no_invoice, "Nama_Klien": nama_klien,
-                            "Keterangan": keterangan, "Harga_KG": harga_kg, "Banyaknya_KG": banyak_kg,
-                            "Jumlah": jumlah, "PPN": ppn, "Total_Akhir": total_akhir
-                        }])
-                        updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-                        updated_df.to_csv(NAMA_FILE_DB, index=False)
-                        st.success("✅ BERHASIL! Data Invoice telah dibukukan.")
-                        st.balloons()
-                    except Exception as e:
-                        st.error(f"❌ Gagal menyimpan data: {e}")
+            st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
+            img_formal = buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_kg, banyak_kg)
+            st.download_button(label="🖨️ UNDUH GAMBAR INVOICE (SIAP CETAK)", data=img_formal, file_name=f"{no_invoice.replace('/','_')}_{nama_klien}.png", mime="image/png", type="primary")
 
 except Exception as e:
     st.error(f"Waduh, ada masalah internal dengan file lokal: {e}")
