@@ -1,5 +1,54 @@
 import streamlit as st
 import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
+import io
+from datetime import datetime
+
+# --- FUNGSI PEMBUAT GAMBAR INVOICE ---
+def buat_invoice_gambar(nama_klien, armada, volume, tagihan):
+    # Membuat kanvas putih ukuran 500x300 pixel
+    img = Image.new('RGB', (500, 320), color=(255, 255, 255))
+    d = ImageDraw.Draw(img)
+    
+    # Mencoba memuat font standar, jika gagal pakai font bawaan
+    try:
+        font_title = ImageFont.truetype("arial.ttf", 22)
+        font_bold = ImageFont.truetype("arialbd.ttf", 16)
+        font_text = ImageFont.truetype("arial.ttf", 14)
+    except:
+        font_title = ImageFont.load_default()
+        font_bold = ImageFont.load_default()
+        font_text = ImageFont.load_default()
+
+    # Menggambar Teks Header
+    d.text((20, 20), "TANGO LOGISTIK", fill=(0, 0, 150), font=font_title)
+    d.text((20, 50), "INVOICE / TAGIHAN JASA ANGKUTAN", fill=(100, 100, 100), font=font_text)
+    d.line([(20, 75), (480, 75)], fill=(0, 0, 0), width=2)
+
+    # Menggambar Detail
+    tanggal_sekarang = datetime.now().strftime("%d %B %Y")
+    d.text((20, 90), f"Tanggal Cetak : {tanggal_sekarang}", fill=(0, 0, 0), font=font_text)
+    d.text((20, 120), f"Kepada Yth.   : {nama_klien}", fill=(0, 0, 0), font=font_bold)
+    d.text((20, 150), f"Armada        : {armada}", fill=(0, 0, 0), font=font_text)
+    d.text((20, 180), f"Total Volume  : {volume:,.0f} cm³", fill=(0, 0, 0), font=font_text)
+
+    d.line([(20, 215), (480, 215)], fill=(0, 0, 0), width=1)
+
+    # Menggambar Total Tagihan
+    d.text((20, 230), "TOTAL DITAGIHKAN:", fill=(0, 0, 0), font=font_bold)
+    d.text((220, 225), f"Rp {tagihan:,.0f}", fill=(0, 120, 0), font=font_title)
+
+    d.line([(20, 265), (480, 265)], fill=(0, 0, 0), width=1)
+    
+    # Footer
+    d.text((20, 275), "* Terima kasih atas kepercayaan Anda menggunakan jasa kami.", fill=(100, 100, 100), font=font_text)
+    d.text((20, 295), "* Pembayaran dapat ditransfer ke rekening resmi perusahaan.", fill=(100, 100, 100), font=font_text)
+
+    # Mengubah gambar ke format bytes agar bisa di-download Streamlit
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    return img_byte_arr.getvalue()
+
 
 # --- BAGIAN 1: Judul dan Tampilan Dasar ---
 st.set_page_config(page_title="Tango Logistik - Dasbor Operasional", layout="wide")
@@ -401,7 +450,7 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu mahal/boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (UPDATE: VOLUME CM3 & ARMADA)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (UPDATE: CETAK GAMBAR INVOICE)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
@@ -445,32 +494,30 @@ try:
                 elif angka_hari > 30: st.error(f"🚨 Siapkan minimal **Rp {kebutuhan_modal_kerja:,.0f}** di rekening untuk talangan.")
                 else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
-        # --- ISI TAB 3 (BARU): INVOICE KONSOLIDASI (LTL) DENGAN VOLUME CM3 ---
+        # --- ISI TAB 3: INVOICE KONSOLIDASI DENGAN FITUR CETAK GAMBAR ---
         with tab3:
             st.markdown("### 🧾 Kalkulator Tagihan Pro-rata (Sistem Pecah Muatan Volume)")
-            st.info("Fitur ini membagi Harga Trip secara adil kepada klien berdasarkan persentase volume muatan (cm³), sehingga pendapatan tetap utuh meskipun ada ruang kosong di bak truk.")
+            st.info("Fitur ini membagi Harga Trip secara adil kepada klien. Anda juga bisa langsung mengunduh struk tagihan berupa file foto/gambar (PNG).")
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
-                # Mengambil daftar armada dari data excel
                 pilihan_mobil_list_inv = data_mobil['Tipe Mobil'].dropna().unique().tolist() if 'Tipe Mobil' in data_mobil.columns else ["Truk Default"]
                 armada_inv = st.selectbox("Pilih Armada yang Berangkat:", pilihan_mobil_list_inv, key="armada_inv")
             with col_inv2:
                 harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=3000000.0, step=100000.0)
             with col_inv3:
-                # Default 12 Juta cm3 (12 CBM) untuk estimasi truk engkel standar
                 kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=12000000.0, step=500000.0, format="%.0f")
             
             st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {armada_inv}:**")
             col_klien1, col_klien2, col_klien3 = st.columns(3)
             with col_klien1:
-                klien_1 = st.text_input("Nama Klien 1:", value="Perusahaan A (Pemangkat)")
+                klien_1 = st.text_input("Nama Klien 1:", value="Perusahaan A")
                 vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=3000000.0, step=100000.0, format="%.0f")
             with col_klien2:
-                klien_2 = st.text_input("Nama Klien 2:", value="Perusahaan B (Singkawang)")
+                klien_2 = st.text_input("Nama Klien 2:", value="Perusahaan B")
                 vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=4000000.0, step=100000.0, format="%.0f")
             with col_klien3:
-                klien_3 = st.text_input("Nama Klien 3:", value="Perusahaan C (Sambas)")
+                klien_3 = st.text_input("Nama Klien 3:", value="Perusahaan C")
                 vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=2500000.0, step=100000.0, format="%.0f")
             
             total_muatan_aktual = vol_1 + vol_2 + vol_3
@@ -479,11 +526,10 @@ try:
             st.markdown("---")
             if total_muatan_aktual > 0:
                 if total_muatan_aktual > kapasitas_truk_inv:
-                    st.error(f"🚨 OVERLOAD! Total muatan ({total_muatan_aktual:,.0f} cm³) melebihi kapasitas maksimum {armada_inv} ({kapasitas_truk_inv:,.0f} cm³).")
+                    st.error(f"🚨 OVERLOAD! Total muatan ({total_muatan_aktual:,.0f} cm³) melebihi kapasitas {armada_inv}.")
                 else:
-                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual:,.0f} cm³. Sisa ruang kosong (Gap): {sisa_kapasitas:,.0f} cm³.")
+                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual:,.0f} cm³. Sisa ruang (Gap): {sisa_kapasitas:,.0f} cm³.")
                     
-                    # Logika Prorata Murni (Membagi 100% Harga Trip ke muatan yang ada)
                     pct_1 = vol_1 / total_muatan_aktual
                     pct_2 = vol_2 / total_muatan_aktual
                     pct_3 = vol_3 / total_muatan_aktual
@@ -492,17 +538,33 @@ try:
                     tagihan_2 = pct_2 * harga_target_trip
                     tagihan_3 = pct_3 * harga_target_trip
                     
-                    st.markdown("**💵 Rincian Tagihan Invoice (Pro-rata Berdasarkan Volume):**")
+                    st.markdown("**💵 Rincian Tagihan Invoice:**")
                     col_tag1, col_tag2, col_tag3 = st.columns(3)
                     
                     if vol_1 > 0:
-                        col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}", f"{pct_1*100:.1f}% dari Volume Terpakai")
+                        col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}")
                     if vol_2 > 0:
-                        col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}", f"{pct_2*100:.1f}% dari Volume Terpakai")
+                        col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}")
                     if vol_3 > 0:
-                        col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}", f"{pct_3*100:.1f}% dari Volume Terpakai")
-                        
-                    st.info(f"💡 Meskipun terdapat sisa kapasitas kosong {sisa_kapasitas:,.0f} cm³, total pendapatan Anda tetap utuh di angka **Rp {tagihan_1 + tagihan_2 + tagihan_3:,.0f}**.")
+                        col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}")
+                    
+                    st.markdown("---")
+                    st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
+                    col_dl1, col_dl2, col_dl3 = st.columns(3)
+                    
+                    # Logika Tombol Download Gambar
+                    if vol_1 > 0:
+                        img_1 = buat_invoice_gambar(klien_1, armada_inv, vol_1, tagihan_1)
+                        col_dl1.download_button(label=f"📥 Unduh Foto Invoice {klien_1}", data=img_1, file_name=f"Invoice_{klien_1}.png", mime="image/png")
+                    
+                    if vol_2 > 0:
+                        img_2 = buat_invoice_gambar(klien_2, armada_inv, vol_2, tagihan_2)
+                        col_dl2.download_button(label=f"📥 Unduh Foto Invoice {klien_2}", data=img_2, file_name=f"Invoice_{klien_2}.png", mime="image/png")
+                    
+                    if vol_3 > 0:
+                        img_3 = buat_invoice_gambar(klien_3, armada_inv, vol_3, tagihan_3)
+                        col_dl3.download_button(label=f"📥 Unduh Foto Invoice {klien_3}", data=img_3, file_name=f"Invoice_{klien_3}.png", mime="image/png")
+
             else:
                 st.warning("Silakan masukkan volume muatan minimal untuk 1 klien.")
 
