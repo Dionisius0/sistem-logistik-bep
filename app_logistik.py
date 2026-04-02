@@ -26,7 +26,7 @@ def format_terbilang(n):
     return f"{hasil} RUPIAH".upper()
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL (B2B) ---
-def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_kg, banyak_kg):
+def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_vol, total_vol):
     # Ukuran kanvas resolusi tinggi
     img = Image.new('RGB', (1000, 750), color=(255, 255, 255))
     d = ImageDraw.Draw(img)
@@ -86,23 +86,23 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.line([(x_col2, y_tabel), (x_col2, y_tabel + 100)], fill="black", width=1)
     d.line([(x_col3, y_tabel), (x_col3, y_tabel + 100)], fill="black", width=1)
 
-    # Header Teks
+    # Header Teks (Diubah menjadi Volume)
     draw_centered_text([30, y_tabel, x_col1, y_tabel + 30], "KETERANGAN", f_bold)
-    draw_centered_text([x_col1, y_tabel, x_col2, y_tabel + 30], "HARGA / KG", f_bold)
-    draw_centered_text([x_col2, y_tabel, x_col3, y_tabel + 30], "BANYAKNYA / KG", f_bold)
+    draw_centered_text([x_col1, y_tabel, x_col2, y_tabel + 30], "HARGA / VOL", f_bold)
+    draw_centered_text([x_col2, y_tabel, x_col3, y_tabel + 30], "VOLUME", f_bold)
     draw_centered_text([x_col3, y_tabel, 970, y_tabel + 30], "JUMLAH", f_bold)
 
     # Matematika
-    jumlah = harga_kg * banyak_kg
+    jumlah = harga_vol * total_vol
     ppn = jumlah * 0.11
     total = jumlah + ppn
 
     # Data Teks
     draw_centered_text([30, y_tabel+30, x_col1, y_tabel+100], keterangan, f_text)
     d.text((x_col1 + 10, y_tabel + 40), f"Rp", fill="black", font=f_text)
-    d.text((x_col2 - 60, y_tabel + 40), f"{harga_kg:,.2f}", fill="black", font=f_text)
+    d.text((x_col2 - 60, y_tabel + 40), f"{harga_vol:,.2f}", fill="black", font=f_text)
     
-    draw_centered_text([x_col2, y_tabel+30, x_col3, y_tabel+100], f"{banyak_kg:,.0f}", f_text)
+    draw_centered_text([x_col2, y_tabel+30, x_col3, y_tabel+100], f"{total_vol:,.0f}", f_text)
     
     d.text((x_col3 + 10, y_tabel + 40), f"Rp", fill="black", font=f_text)
     d.text((970 - 90, y_tabel + 40), f"{jumlah:,.0f}", fill="black", font=f_text)
@@ -113,7 +113,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.text((x_col3 + 10, y_sub), "Rp", fill="black", font=f_text)
     d.text((970 - 90, y_sub), f"{jumlah:,.0f}", fill="black", font=f_text)
 
-    d.text((x_col2 + 10, y_sub + 20), "PPN", fill="black", font=f_text)
+    d.text((x_col2 + 10, y_sub + 20), "PPN (11%)", fill="black", font=f_text)
     d.text((x_col3 + 10, y_sub + 20), "Rp", fill="black", font=f_text)
     d.text((970 - 90, y_sub + 20), f"{ppn:,.0f}", fill="black", font=f_text)
 
@@ -157,12 +157,12 @@ st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
 st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
 # --- DATABASE LOKAL & SISTEM AUTO-SAVE ---
-NAMA_FILE_DB = "database_invoice_formal.csv"
+NAMA_FILE_DB = "database_invoice.csv"
 NAMA_FILE_JADWAL = "database_jadwal.csv"
 STATE_FILE_INPUTS = "auto_save_inputs.json"
 
 if not os.path.exists(NAMA_FILE_DB):
-    pd.DataFrame(columns=["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_KG", "Banyaknya_KG", "Jumlah", "PPN", "Total_Akhir"]).to_csv(NAMA_FILE_DB, index=False)
+    pd.DataFrame(columns=["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"]).to_csv(NAMA_FILE_DB, index=False)
 
 if not os.path.exists(NAMA_FILE_JADWAL):
     pd.DataFrame(columns=["Waktu_Simpan", "Hari", "Armada", "Rute", "Jml_Trip", "Pendapatan_Utama", "Pendapatan_Backhaul", "Total_Biaya"]).to_csv(NAMA_FILE_JADWAL, index=False)
@@ -461,6 +461,50 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
+        # FITUR DATABASE JADWAL
+        st.markdown("---")
+        st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
+        col_dl, col_sv = st.columns(2)
+        
+        with col_dl:
+            if len(data_laporan_jadwal) > 0:
+                df_laporan = pd.DataFrame(data_laporan_jadwal)
+                csv_data = df_laporan.to_csv(index=False).encode('utf-8')
+                st.download_button(label="📥 Unduh Laporan Jadwal (CSV)", data=csv_data, file_name="Jadwal_Logistik_Tango.csv", mime="text/csv")
+            else:
+                st.info("Pilih armada dan rute di atas untuk memunculkan tombol unduh.")
+
+        with col_sv:
+            if st.button("🚀 MENCETAK JADWAL KE BUKU BESAR (CSV)", type="primary"):
+                if len(data_laporan_jadwal) > 0:
+                    try:
+                        waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        data_simpan = []
+                        for baris in data_laporan_jadwal:
+                            data_simpan.append({
+                                "Waktu_Simpan": waktu_sekarang,
+                                "Hari": baris["Hari"],
+                                "Armada": baris["Armada"],
+                                "Rute": baris["Rute"],
+                                "Jml_Trip": baris["Jml Trip"],
+                                "Pendapatan_Utama": baris["Pendapatan Utama"],
+                                "Pendapatan_Backhaul": baris["Pendapatan Muatan Balik (Nett 55%)"],
+                                "Total_Biaya": baris["Total Biaya"]
+                            })
+                            
+                        df_jadwal_baru = pd.DataFrame(data_simpan)
+                        df_jadwal_lama = pd.read_csv(NAMA_FILE_JADWAL)
+                        
+                        df_gabungan_jadwal = pd.concat([df_jadwal_lama, df_jadwal_baru], ignore_index=True)
+                        df_gabungan_jadwal.to_csv(NAMA_FILE_JADWAL, index=False)
+                        
+                        st.success("✅ BERHASIL! Jadwal operasional telah dicetak ke Laporan Database Lokal.")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Gagal merekam jadwal: {e}")
+                else:
+                    st.warning("⚠️ Jadwal masih kosong. Silakan atur rute terlebih dahulu.")
+
     # =====================================================================
     # HALAMAN 3: DASHBOARD EKSEKUTIF & KPI ARMADA
     # =====================================================================
@@ -703,13 +747,13 @@ try:
                 keterangan = st.text_input("Keterangan Pekerjaan:", value=get_val('keterangan_formal', "Biaya angkut barang Fortune Pillow Pack 500 ml x 24 Bags (SPK No.2080744206)"))
                 current_state['keterangan_formal'] = keterangan
             with col_tag2:
-                harga_kg = st.number_input("Harga / KG (Rp):", min_value=0.0, value=float(get_val('harga_kg', 325.0)), step=10.0)
-                current_state['harga_kg'] = harga_kg
+                harga_vol = st.number_input("Harga / Volume (Rp):", min_value=0.0, value=float(get_val('harga_vol', 325.0)), step=10.0)
+                current_state['harga_vol'] = harga_vol
             with col_tag3:
-                banyak_kg = st.number_input("Banyaknya / KG:", min_value=0.0, value=float(get_val('banyak_kg', 11440.0)), step=100.0)
-                current_state['banyak_kg'] = banyak_kg
+                total_vol = st.number_input("Total Volume:", min_value=0.0, value=float(get_val('total_vol', 11440.0)), step=100.0)
+                current_state['total_vol'] = total_vol
 
-            jumlah = harga_kg * banyak_kg
+            jumlah = harga_vol * total_vol
             ppn = jumlah * 0.11
             total_akhir = jumlah + ppn
 
@@ -731,7 +775,7 @@ try:
                     new_data = pd.DataFrame([{
                         "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "No_Invoice": no_invoice, "Nama_Klien": nama_klien,
-                        "Keterangan": keterangan, "Harga_KG": harga_kg, "Banyaknya_KG": banyak_kg,
+                        "Keterangan": keterangan, "Harga_Volume": harga_vol, "Total_Volume": total_vol,
                         "Jumlah": jumlah, "PPN": ppn, "Total_Akhir": total_akhir
                     }])
                     updated_df = pd.concat([existing_data, new_data], ignore_index=True)
@@ -742,7 +786,7 @@ try:
                     st.error(f"❌ Gagal menyimpan data: {e}")
 
             st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
-            img_formal = buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_kg, banyak_kg)
+            img_formal = buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_vol, total_vol)
             st.download_button(label="🖨️ UNDUH GAMBAR INVOICE (SIAP CETAK)", data=img_formal, file_name=f"{no_invoice.replace('/','_')}_{nama_klien}.png", mime="image/png", type="primary")
 
 except Exception as e:
