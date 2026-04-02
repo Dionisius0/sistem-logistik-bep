@@ -28,7 +28,7 @@ def format_terbilang(n):
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL (B2B) ---
 def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_vol, total_vol, jumlah, ppn, total_akhir):
-    # Ukuran kanvas resolusi tinggi
+    # Ukuran kanvas resolusi tinggi agar tidak pecah saat di-print
     img = Image.new('RGB', (1000, 750), color=(255, 255, 255))
     d = ImageDraw.Draw(img)
     
@@ -62,10 +62,10 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     
     d.text((655, 60), "Tanggal Invoice", fill="black", font=f_text)
     d.text((655, 75), "No. Invoice", fill="black", font=f_text)
-    d.text((820, 60), tgl_invoice, fill="black", font=f_text)
-    d.text((820, 75), no_invoice, fill="black", font=f_text)
+    d.text((810, 60), tgl_invoice, fill="black", font=f_text)
+    d.text((810, 75), no_invoice, fill="black", font=f_text)
 
-    # 3. KEPADA (ALAMAT)
+    # 3. KEPADA (ALAMAT KLIEN BISA MULTI-BARIS)
     d.text((30, 120), "Kepada", fill="black", font=f_bold)
     d.text((30, 135), nama_klien, fill="black", font=f_bold)
     
@@ -77,7 +77,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     # 4. TABEL UTAMA
     y_tabel = 240
     d.rectangle([30, y_tabel, 970, y_tabel + 100], outline="black", width=2)
-    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2)
+    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2) # Garis Header
     
     # Garis Vertikal Tabel
     x_col1 = 550
@@ -87,11 +87,13 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.line([(x_col2, y_tabel), (x_col2, y_tabel + 100)], fill="black", width=1)
     d.line([(x_col3, y_tabel), (x_col3, y_tabel + 100)], fill="black", width=1)
 
+    # Header Teks
     draw_centered_text([30, y_tabel, x_col1, y_tabel + 30], "KETERANGAN", f_bold)
     draw_centered_text([x_col1, y_tabel, x_col2, y_tabel + 30], "HARGA / VOL", f_bold)
     draw_centered_text([x_col2, y_tabel, x_col3, y_tabel + 30], "VOLUME", f_bold)
     draw_centered_text([x_col3, y_tabel, 970, y_tabel + 30], "JUMLAH", f_bold)
 
+    # Data Teks
     draw_centered_text([30, y_tabel+30, x_col1, y_tabel+100], keterangan, f_text)
     
     d.text((x_col1 + 10, y_tabel + 40), f"Rp", fill="black", font=f_text)
@@ -456,6 +458,7 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
+        # FITUR DATABASE JADWAL
         st.markdown("---")
         st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
         col_dl, col_sv = st.columns(2)
@@ -761,6 +764,41 @@ try:
                 
             sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
             
+            # =================================================================
+            # 🔥 SISTEM SINKRONISASI OTOMATIS (MASTER CONTROL)
+            # =================================================================
+            if 'last_tarif' not in st.session_state: st.session_state.last_tarif = tarif_per_unit
+            if 'last_vol1' not in st.session_state: st.session_state.last_vol1 = vol_1
+            if 'last_vol2' not in st.session_state: st.session_state.last_vol2 = vol_2
+            if 'last_vol3' not in st.session_state: st.session_state.last_vol3 = vol_3
+            
+            if 'hkg1' not in st.session_state: st.session_state.hkg1 = float(get_val('hkg1', tarif_per_unit))
+            if 'bkg1' not in st.session_state: st.session_state.bkg1 = float(get_val('bkg1', vol_1))
+            if 'hkg2' not in st.session_state: st.session_state.hkg2 = float(get_val('hkg2', tarif_per_unit))
+            if 'bkg2' not in st.session_state: st.session_state.bkg2 = float(get_val('bkg2', vol_2))
+            if 'hkg3' not in st.session_state: st.session_state.hkg3 = float(get_val('hkg3', tarif_per_unit))
+            if 'bkg3' not in st.session_state: st.session_state.bkg3 = float(get_val('bkg3', vol_3))
+
+            # Jika ada perubahan di kotak Master atas, langsung timpa kotak bawah!
+            if st.session_state.last_tarif != tarif_per_unit:
+                st.session_state.hkg1 = float(tarif_per_unit)
+                st.session_state.hkg2 = float(tarif_per_unit)
+                st.session_state.hkg3 = float(tarif_per_unit)
+                st.session_state.last_tarif = tarif_per_unit
+                
+            if st.session_state.last_vol1 != vol_1:
+                st.session_state.bkg1 = float(vol_1)
+                st.session_state.last_vol1 = vol_1
+                
+            if st.session_state.last_vol2 != vol_2:
+                st.session_state.bkg2 = float(vol_2)
+                st.session_state.last_vol2 = vol_2
+                
+            if st.session_state.last_vol3 != vol_3:
+                st.session_state.bkg3 = float(vol_3)
+                st.session_state.last_vol3 = vol_3
+            # =================================================================
+
             st.markdown("---")
             if total_muatan_aktual > 0:
                 if total_muatan_aktual > kapasitas_truk_inv:
@@ -807,10 +845,10 @@ try:
                             
                             c_hk1, c_bk1 = st.columns(2)
                             with c_hk1:
-                                hk1 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg1")
+                                hk1 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg1")
                                 current_state['hkg1'] = hk1
                             with c_bk1:
-                                bk1 = st.number_input("Total Volume:", value=float(vol_1), step=100.0, key="bkg1")
+                                bk1 = st.number_input("Total Volume:", step=100.0, key="bkg1")
                                 current_state['bkg1'] = bk1
 
                             jum1 = hk1 * bk1
@@ -841,10 +879,10 @@ try:
                             
                             c_hk2, c_bk2 = st.columns(2)
                             with c_hk2:
-                                hk2 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg2")
+                                hk2 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg2")
                                 current_state['hkg2'] = hk2
                             with c_bk2:
-                                bk2 = st.number_input("Total Volume:", value=float(vol_2), step=100.0, key="bkg2")
+                                bk2 = st.number_input("Total Volume:", step=100.0, key="bkg2")
                                 current_state['bkg2'] = bk2
 
                             jum2 = hk2 * bk2
@@ -875,10 +913,10 @@ try:
                             
                             c_hk3, c_bk3 = st.columns(2)
                             with c_hk3:
-                                hk3 = st.number_input("Harga / Volume (Rp):", value=float(tarif_per_unit), step=10.0, key="hkg3")
+                                hk3 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg3")
                                 current_state['hkg3'] = hk3
                             with c_bk3:
-                                bk3 = st.number_input("Total Volume:", value=float(vol_3), step=100.0, key="bkg3")
+                                bk3 = st.number_input("Total Volume:", step=100.0, key="bkg3")
                                 current_state['bkg3'] = bk3
 
                             jum3 = hk3 * bk3
