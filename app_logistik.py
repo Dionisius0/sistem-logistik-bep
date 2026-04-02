@@ -379,6 +379,7 @@ try:
         elif laba_rugi_aktual > 0: col_k3.metric("⚠️ Laba Bersih", f"Rp {laba_rugi_aktual:,.0f}")
         else: col_k3.metric("🚨 RUGI", f"Rp {laba_rugi_aktual:,.0f}")
 
+        # FITUR DATABASE JADWAL
         st.markdown("---")
         st.markdown("#### 💾 Simpan & Unduh Laporan Jadwal")
         col_dl, col_sv = st.columns(2)
@@ -587,13 +588,12 @@ try:
                 st.error("⚠️ **Peringatan:** Armada ini terlalu boros untuk jarak sejauh ini dengan kapasitas tersebut.")
 
     # =====================================================================
-    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (INVOICE PRO + AUTO SAVE)
+    # HALAMAN 5: KEUANGAN LANJUTAN & ASET (INVOICE FORMAL & PRO-RATA)
     # =====================================================================
     elif menu_halaman == "🏦 Keuangan Lanjutan & Aset":
         st.subheader("🏦 Manajemen Keuangan Lanjutan")
-        st.write("Gunakan menu ini untuk menghitung tabungan pemeliharaan aset, simulasi modal kerja, dan pembagian invoice konsolidasi.")
         
-        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Invoice LTL (Auto-Save Aktif)"])
+        tab1, tab2, tab3 = st.tabs(["🛞 Kalkulator Pemeliharaan Aset", "💸 Simulator Arus Kas", "🧾 Sistem Pembuatan Invoice B2B"])
         
         with tab1:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
@@ -639,8 +639,8 @@ try:
                 else: st.info(f"💡 Pastikan arus kas memiliki penyangga setidaknya **Rp {kebutuhan_modal_kerja:,.0f}**.")
 
         with tab3:
-            st.markdown("### 🧾 Kalkulator Tagihan Pro-rata & Laporan Invoice")
-            st.info("⚡ Setiap huruf dan angka yang diketik di kotak ini sudah otomatis tersimpan secara ajaib (Auto-Save).")
+            st.markdown("### 1️⃣ Kalkulasi Pembagian Harga Trip (Pro-rata Logistik)")
+            st.write("Tentukan harga trip keseluruhan, lalu bagi proporsinya berdasarkan volume muatan ke-3 klien.")
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
@@ -677,79 +677,148 @@ try:
                 current_state['vol_3'] = vol_3
             
             total_muatan_aktual = vol_1 + vol_2 + vol_3
-            sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
             
-            st.markdown("---")
+            # MATEMATIKA TARIF DASAR (PRO-RATA LOGISTIK)
+            tarif_per_unit = 0
             if total_muatan_aktual > 0:
-                if total_muatan_aktual > kapasitas_truk_inv:
-                    st.error(f"🚨 OVERLOAD! Total muatan melebihi kapasitas.")
+                tarif_per_unit = harga_target_trip / total_muatan_aktual
+
+            st.markdown("---")
+            st.markdown("### 2️⃣ Formulir Cetak Invoice (Bisa Diedit Manual)")
+            st.info("Sistem telah menyarankan **Harga/Volume** secara proporsional dari hitungan di atas. Silakan ubah alamat, keterangan, atau **edit harga manual** jika perlu, sebelum mencetak Invoice.")
+
+            col_inv_tgl, col_inv_no = st.columns(2)
+            with col_inv_tgl:
+                tgl_invoice = st.text_input("Tanggal Invoice Global:", value=get_val('tgl_invoice', datetime.now().strftime("%d %B %Y")))
+                current_state['tgl_invoice'] = tgl_invoice
+            with col_inv_no:
+                no_invoice_dasar = st.text_input("No. Invoice Dasar (Akan otomatis ditambah urutan):", value=get_val('no_invoice_dasar', f"INV{datetime.now().strftime('%y')}-00"))
+                current_state['no_invoice_dasar'] = no_invoice_dasar
+
+            # 3 TAB UNTUK MENGEDIT INVOICE MASING-MASING KLIEN
+            tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 Invoice {klien_1}", f"📄 Invoice {klien_2}", f"📄 Invoice {klien_3}"])
+
+            # ---- INVOICE KLIEN 1 ----
+            with tab_inv1:
+                if vol_1 > 0:
+                    alamat_1 = st.text_area("Alamat Klien:", value=get_val('al1', "GEDUNG MULTIVISION TOWER, LT. 15\nJL KUNINGAN MULIA LOT 9B\nJAKARTA SELATAN DKI JAKARTA 00000"), height=100, key="al1")
+                    current_state['al1'] = alamat_1
+                    
+                    ket_1 = st.text_input("Keterangan Pekerjaan:", value=get_val('ket1', "Biaya angkut barang Fortune Pillow Pack 500 ml x 24 Bags (SPK No.2080744206)"), key="ket1")
+                    current_state['ket1'] = ket_1
+                    
+                    c_hk1, c_bk1 = st.columns(2)
+                    with c_hk1:
+                        hk1 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg1', tarif_per_unit)), step=10.0, key="hkg1")
+                        current_state['hkg1'] = hk1
+                    with c_bk1:
+                        bk1 = st.number_input("Total Volume:", value=float(get_val('bkg1', vol_1)), step=100.0, key="bkg1")
+                        current_state['bkg1'] = bk1
+
+                    jum1 = hk1 * bk1
+                    ppn1 = jum1 * 0.11
+                    tot1 = jum1 + ppn1
+
+                    st.markdown("**Hasil Akhir Tagihan:**")
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("Sub Total", f"Rp {jum1:,.0f}")
+                    r2.metric("PPN (11%)", f"Rp {ppn1:,.0f}")
+                    r3.metric("Total Tagihan", f"Rp {tot1:,.0f}")
+                    st.caption(f"*Terbilang: {format_terbilang(tot1)}*")
+
+                    no_inv_1 = f"{no_invoice_dasar}1"
+                    img_1 = buat_invoice_formal(no_inv_1, tgl_invoice, klien_1, alamat_1, ket_1, hk1, bk1)
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_1})", data=img_1, file_name=f"{no_inv_1.replace('/','_')}_{klien_1}.png", mime="image/png", type="primary", key="dl1")
                 else:
-                    st.success(f"📊 **Analisis Kapasitas:** Truk terisi {total_muatan_aktual:,.0f} cm³. Sisa ruang (Gap): {sisa_kapasitas:,.0f} cm³.")
-                    
-                    pct_1, pct_2, pct_3 = vol_1 / total_muatan_aktual, vol_2 / total_muatan_aktual, vol_3 / total_muatan_aktual
-                    tagihan_1, tagihan_2, tagihan_3 = pct_1 * harga_target_trip, pct_2 * harga_target_trip, pct_3 * harga_target_trip
-                    
-                    st.markdown("**💵 Rincian Tagihan Invoice:**")
-                    col_tag1, col_tag2, col_tag3 = st.columns(3)
-                    
-                    if vol_1 > 0: col_tag1.metric(f"Tagihan {klien_1}", f"Rp {tagihan_1:,.0f}")
-                    if vol_2 > 0: col_tag2.metric(f"Tagihan {klien_2}", f"Rp {tagihan_2:,.0f}")
-                    if vol_3 > 0: col_tag3.metric(f"Tagihan {klien_3}", f"Rp {tagihan_3:,.0f}")
-                    
-                    # FITUR BARU: SETTING EKSTRA UNTUK CETAK INVOICE
-                    st.markdown("---")
-                    with st.expander("⚙️ Pengaturan Desain & Info Invoice (Untuk Dicetak)", expanded=True):
-                        col_set1, col_set2 = st.columns(2)
-                        with col_set1:
-                            rute_inv = st.text_input("Rute Pengiriman:", value=get_val('rute_inv', "Pemangkat - Tujuan Kota"))
-                            current_state['rute_inv'] = rute_inv
-                            
-                            jatuh_tempo = st.text_input("Jatuh Tempo Pembayaran:", value=get_val('jatuh_tempo', "14 Hari setelah invoice diterima"))
-                            current_state['jatuh_tempo'] = jatuh_tempo
-                        with col_set2:
-                            rek_inv = st.text_area("Info Rekening Bank (Tampil di Invoice):", value=get_val('rek_inv', "Bank BCA - 1234567890\na.n. Tango Logistik\nBank Mandiri - 0987654321\na.n. Tango Logistik"))
-                            current_state['rek_inv'] = rek_inv
-                    
-                    st.markdown("---")
-                    
-                    # FITUR DATABASE CSV
-                    if st.button("🚀 MENCETAK INVOICE KE BUKU BESAR (CSV)", type="primary"):
-                        try:
-                            new_data = pd.DataFrame([{
-                                "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
-                                "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
-                                "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
-                                "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
-                            }])
-                            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-                            updated_df.to_csv(NAMA_FILE_DB, index=False)
-                            st.success("✅ BERHASIL! Invoice telah dicatat ke Laporan Database Lokal.")
-                            st.balloons()
-                        except Exception as e:
-                            st.error(f"❌ Gagal menyimpan data: {e}")
+                    st.warning("Isi volume di atas untuk mengaktifkan klien ini.")
 
-                    st.markdown("#### 🖨️ Cetak & Unduh Invoice Klien (Format Gambar PNG)")
-                    col_dl1, col_dl2, col_dl3 = st.columns(3)
+            # ---- INVOICE KLIEN 2 ----
+            with tab_inv2:
+                if vol_2 > 0:
+                    alamat_2 = st.text_area("Alamat Klien:", value=get_val('al2', "Kawasan Industri MM2100\nCikarang Barat, Bekasi"), height=100, key="al2")
+                    current_state['al2'] = alamat_2
                     
-                    # Menghasilkan nomor invoice unik harian (Contoh: INV/20260402/01)
-                    tgl_inv = datetime.now().strftime('%Y%m%d')
+                    ket_2 = st.text_input("Keterangan Pekerjaan:", value=get_val('ket2', "Biaya Jasa Angkutan LTL - Material Proyek"), key="ket2")
+                    current_state['ket2'] = ket_2
                     
-                    if vol_1 > 0:
-                        no_inv_1 = f"INV/{tgl_inv}/01"
-                        img_1 = buat_invoice_gambar(klien_1, armada_inv, vol_1, tagihan_1, no_inv_1, rute_inv, jatuh_tempo, rek_inv)
-                        col_dl1.download_button(label=f"📥 Unduh Invoice {klien_1}", data=img_1, file_name=f"Invoice_{klien_1}.png", mime="image/png")
-                    if vol_2 > 0:
-                        no_inv_2 = f"INV/{tgl_inv}/02"
-                        img_2 = buat_invoice_gambar(klien_2, armada_inv, vol_2, tagihan_2, no_inv_2, rute_inv, jatuh_tempo, rek_inv)
-                        col_dl2.download_button(label=f"📥 Unduh Invoice {klien_2}", data=img_2, file_name=f"Invoice_{klien_2}.png", mime="image/png")
-                    if vol_3 > 0:
-                        no_inv_3 = f"INV/{tgl_inv}/03"
-                        img_3 = buat_invoice_gambar(klien_3, armada_inv, vol_3, tagihan_3, no_inv_3, rute_inv, jatuh_tempo, rek_inv)
-                        col_dl3.download_button(label=f"📥 Unduh Invoice {klien_3}", data=img_3, file_name=f"Invoice_{klien_3}.png", mime="image/png")
+                    c_hk2, c_bk2 = st.columns(2)
+                    with c_hk2:
+                        hk2 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg2', tarif_per_unit)), step=10.0, key="hkg2")
+                        current_state['hkg2'] = hk2
+                    with c_bk2:
+                        bk2 = st.number_input("Total Volume:", value=float(get_val('bkg2', vol_2)), step=100.0, key="bkg2")
+                        current_state['bkg2'] = bk2
 
-            else:
-                st.warning("Silakan masukkan volume muatan minimal untuk 1 klien.")
+                    jum2 = hk2 * bk2
+                    ppn2 = jum2 * 0.11
+                    tot2 = jum2 + ppn2
+
+                    st.markdown("**Hasil Akhir Tagihan:**")
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("Sub Total", f"Rp {jum2:,.0f}")
+                    r2.metric("PPN (11%)", f"Rp {ppn2:,.0f}")
+                    r3.metric("Total Tagihan", f"Rp {tot2:,.0f}")
+                    st.caption(f"*Terbilang: {format_terbilang(tot2)}*")
+
+                    no_inv_2 = f"{no_invoice_dasar}2"
+                    img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk2, bk2)
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_2})", data=img_2, file_name=f"{no_inv_2.replace('/','_')}_{klien_2}.png", mime="image/png", type="primary", key="dl2")
+                else:
+                    st.warning("Isi volume di atas untuk mengaktifkan klien ini.")
+
+            # ---- INVOICE KLIEN 3 ----
+            with tab_inv3:
+                if vol_3 > 0:
+                    alamat_3 = st.text_area("Alamat Klien:", value=get_val('al3', "Pergudangan Marunda Center\nCilincing, Jakarta Utara"), height=100, key="al3")
+                    current_state['al3'] = alamat_3
+                    
+                    ket_3 = st.text_input("Keterangan Pekerjaan:", value=get_val('ket3', "Pengiriman Suku Cadang Mesin Industri"), key="ket3")
+                    current_state['ket3'] = ket_3
+                    
+                    c_hk3, c_bk3 = st.columns(2)
+                    with c_hk3:
+                        hk3 = st.number_input("Harga / Volume (Rp):", value=float(get_val('hkg3', tarif_per_unit)), step=10.0, key="hkg3")
+                        current_state['hkg3'] = hk3
+                    with c_bk3:
+                        bk3 = st.number_input("Total Volume:", value=float(get_val('bkg3', vol_3)), step=100.0, key="bkg3")
+                        current_state['bkg3'] = bk3
+
+                    jum3 = hk3 * bk3
+                    ppn3 = jum3 * 0.11
+                    tot3 = jum3 + ppn3
+
+                    st.markdown("**Hasil Akhir Tagihan:**")
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("Sub Total", f"Rp {jum3:,.0f}")
+                    r2.metric("PPN (11%)", f"Rp {ppn3:,.0f}")
+                    r3.metric("Total Tagihan", f"Rp {tot3:,.0f}")
+                    st.caption(f"*Terbilang: {format_terbilang(tot3)}*")
+
+                    no_inv_3 = f"{no_invoice_dasar}3"
+                    img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk3, bk3)
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_3})", data=img_3, file_name=f"{no_inv_3.replace('/','_')}_{klien_3}.png", mime="image/png", type="primary", key="dl3")
+                else:
+                    st.warning("Isi volume di atas untuk mengaktifkan klien ini.")
+
+            st.markdown("---")
+            # FITUR DATABASE CSV KESELURUHAN
+            if st.button("💾 SIMPAN SEMUA DATA INVOICE KE BUKU BESAR (CSV)", type="secondary"):
+                try:
+                    data_simpan = []
+                    waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    if vol_1 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": f"{no_invoice_dasar}1", "Nama_Klien": klien_1, "Keterangan": ket_1, "Harga_Volume": hk1, "Total_Volume": bk1, "Jumlah": jum1, "PPN": ppn1, "Total_Akhir": tot1})
+                    if vol_2 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": f"{no_invoice_dasar}2", "Nama_Klien": klien_2, "Keterangan": ket_2, "Harga_Volume": hk2, "Total_Volume": bk2, "Jumlah": jum2, "PPN": ppn2, "Total_Akhir": tot2})
+                    if vol_3 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": f"{no_invoice_dasar}3", "Nama_Klien": klien_3, "Keterangan": ket_3, "Harga_Volume": hk3, "Total_Volume": bk3, "Jumlah": jum3, "PPN": ppn3, "Total_Akhir": tot3})
+
+                    if len(data_simpan) > 0:
+                        new_data = pd.DataFrame(data_simpan)
+                        updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+                        updated_df.to_csv(NAMA_FILE_DB, index=False)
+                        st.success("✅ BERHASIL! Seluruh data Invoice yang aktif telah dibukukan.")
+                        st.balloons()
+                except Exception as e:
+                    st.error(f"❌ Gagal menyimpan data: {e}")
 
 except Exception as e:
     st.error(f"Waduh, ada masalah internal dengan file lokal: {e}")
