@@ -28,7 +28,7 @@ def format_terbilang(n):
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL (B2B) ---
 def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_vol, total_vol, jumlah, ppn, total_akhir):
-    # Ukuran kanvas resolusi tinggi agar tidak pecah saat di-print
+    # Ukuran kanvas resolusi tinggi
     img = Image.new('RGB', (1000, 750), color=(255, 255, 255))
     d = ImageDraw.Draw(img)
     
@@ -62,10 +62,10 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     
     d.text((655, 60), "Tanggal Invoice", fill="black", font=f_text)
     d.text((655, 75), "No. Invoice", fill="black", font=f_text)
-    d.text((810, 60), tgl_invoice, fill="black", font=f_text)
-    d.text((810, 75), no_invoice, fill="black", font=f_text)
+    d.text((820, 60), tgl_invoice, fill="black", font=f_text)
+    d.text((820, 75), no_invoice, fill="black", font=f_text)
 
-    # 3. KEPADA (ALAMAT KLIEN BISA MULTI-BARIS)
+    # 3. KEPADA (ALAMAT)
     d.text((30, 120), "Kepada", fill="black", font=f_bold)
     d.text((30, 135), nama_klien, fill="black", font=f_bold)
     
@@ -77,7 +77,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     # 4. TABEL UTAMA
     y_tabel = 240
     d.rectangle([30, y_tabel, 970, y_tabel + 100], outline="black", width=2)
-    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2) # Garis Header
+    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2)
     
     # Garis Vertikal Tabel
     x_col1 = 550
@@ -87,13 +87,11 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.line([(x_col2, y_tabel), (x_col2, y_tabel + 100)], fill="black", width=1)
     d.line([(x_col3, y_tabel), (x_col3, y_tabel + 100)], fill="black", width=1)
 
-    # Header Teks
     draw_centered_text([30, y_tabel, x_col1, y_tabel + 30], "KETERANGAN", f_bold)
     draw_centered_text([x_col1, y_tabel, x_col2, y_tabel + 30], "HARGA / VOL", f_bold)
     draw_centered_text([x_col2, y_tabel, x_col3, y_tabel + 30], "VOLUME", f_bold)
     draw_centered_text([x_col3, y_tabel, 970, y_tabel + 30], "JUMLAH", f_bold)
 
-    # Data Teks
     draw_centered_text([30, y_tabel+30, x_col1, y_tabel+100], keterangan, f_text)
     
     d.text((x_col1 + 10, y_tabel + 40), f"Rp", fill="black", font=f_text)
@@ -723,10 +721,16 @@ try:
             
             col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
-                pilihan_mobil_list_inv = data_mobil['Tipe Mobil'].dropna().unique().tolist() if 'Tipe Mobil' in data_mobil.columns else ["Truk Default"]
-                def_armada_inv = get_val('armada_inv', pilihan_mobil_list_inv[0])
-                if def_armada_inv not in pilihan_mobil_list_inv: def_armada_inv = pilihan_mobil_list_inv[0]
-                armada_inv = st.selectbox("Pilih Armada:", pilihan_mobil_list_inv, index=pilihan_mobil_list_inv.index(def_armada_inv))
+                # LOGIKA MEMBACA PLAT NOMOR DIMASUKKAN KE SINI
+                if 'No. Polisi' in data_mobil.columns:
+                    data_valid_inv = data_mobil.dropna(subset=['No. Polisi', 'Tipe Mobil'])
+                    pilihan_mobil_list_inv = data_valid_inv.apply(lambda row: f"{str(row['No. Polisi']).strip()} - {str(row['Tipe Mobil']).strip()}", axis=1).tolist()
+                else:
+                    pilihan_mobil_list_inv = data_mobil['Tipe Mobil'].dropna().unique().tolist() if 'Tipe Mobil' in data_mobil.columns else ["Truk Default"]
+                
+                def_armada_inv = get_val('armada_inv', pilihan_mobil_list_inv[0]) if pilihan_mobil_list_inv else "Truk Default"
+                if def_armada_inv not in pilihan_mobil_list_inv: def_armada_inv = pilihan_mobil_list_inv[0] if pilihan_mobil_list_inv else "Truk Default"
+                armada_inv = st.selectbox("Pilih Armada:", pilihan_mobil_list_inv, index=pilihan_mobil_list_inv.index(def_armada_inv) if pilihan_mobil_list_inv else 0)
                 current_state['armada_inv'] = armada_inv
 
             with col_inv2:
@@ -779,7 +783,6 @@ try:
             if 'hkg3' not in st.session_state: st.session_state.hkg3 = float(get_val('hkg3', tarif_per_unit))
             if 'bkg3' not in st.session_state: st.session_state.bkg3 = float(get_val('bkg3', vol_3))
 
-            # Jika ada perubahan di kotak Master atas, langsung timpa kotak bawah!
             if st.session_state.last_tarif != tarif_per_unit:
                 st.session_state.hkg1 = float(tarif_per_unit)
                 st.session_state.hkg2 = float(tarif_per_unit)
