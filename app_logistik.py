@@ -28,7 +28,7 @@ def format_terbilang(n):
 
 # --- FUNGSI PEMBUAT GAMBAR INVOICE FORMAL (B2B) ---
 def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keterangan, harga_vol, total_vol, jumlah, ppn, total_akhir):
-    # Ukuran kanvas resolusi tinggi
+    # Ukuran kanvas resolusi tinggi agar tidak pecah saat di-print
     img = Image.new('RGB', (1000, 750), color=(255, 255, 255))
     d = ImageDraw.Draw(img)
     
@@ -62,10 +62,10 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     
     d.text((655, 60), "Tanggal Invoice", fill="black", font=f_text)
     d.text((655, 75), "No. Invoice", fill="black", font=f_text)
-    d.text((820, 60), tgl_invoice, fill="black", font=f_text)
-    d.text((820, 75), no_invoice, fill="black", font=f_text)
+    d.text((810, 60), tgl_invoice, fill="black", font=f_text)
+    d.text((810, 75), no_invoice, fill="black", font=f_text)
 
-    # 3. KEPADA (ALAMAT)
+    # 3. KEPADA (ALAMAT KLIEN BISA MULTI-BARIS)
     d.text((30, 120), "Kepada", fill="black", font=f_bold)
     d.text((30, 135), nama_klien, fill="black", font=f_bold)
     
@@ -77,7 +77,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     # 4. TABEL UTAMA
     y_tabel = 240
     d.rectangle([30, y_tabel, 970, y_tabel + 100], outline="black", width=2)
-    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2)
+    d.line([(30, y_tabel + 30), (970, y_tabel + 30)], fill="black", width=2) # Garis Header
     
     # Garis Vertikal Tabel
     x_col1 = 550
@@ -87,11 +87,13 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.line([(x_col2, y_tabel), (x_col2, y_tabel + 100)], fill="black", width=1)
     d.line([(x_col3, y_tabel), (x_col3, y_tabel + 100)], fill="black", width=1)
 
+    # Header Teks
     draw_centered_text([30, y_tabel, x_col1, y_tabel + 30], "KETERANGAN", f_bold)
     draw_centered_text([x_col1, y_tabel, x_col2, y_tabel + 30], "HARGA / VOL", f_bold)
     draw_centered_text([x_col2, y_tabel, x_col3, y_tabel + 30], "VOLUME", f_bold)
     draw_centered_text([x_col3, y_tabel, 970, y_tabel + 30], "JUMLAH", f_bold)
 
+    # Data Teks
     draw_centered_text([30, y_tabel+30, x_col1, y_tabel+100], keterangan, f_text)
     
     d.text((x_col1 + 10, y_tabel + 40), f"Rp", fill="black", font=f_text)
@@ -719,9 +721,48 @@ try:
             st.markdown("### 1️⃣ Kalkulasi Pembagian Harga Trip (Pro-rata Logistik)")
             st.write("Tentukan harga trip keseluruhan, lalu bagi proporsinya berdasarkan volume muatan ke-3 klien.")
             
+            # --- FUNGSI SINKRONISASI (MASTER CONTROL) ---
+            _init_v1 = float(get_val('vol_1', 3000000.0))
+            _init_v2 = float(get_val('vol_2', 4000000.0))
+            _init_v3 = float(get_val('vol_3', 2500000.0))
+            _init_tot = _init_v1 + _init_v2 + _init_v3
+            _init_tarif = float(get_val('harga_target_trip', 3000000.0)) / _init_tot if _init_tot > 0 else 0.0
+
+            # Menyiapkan state default jika belum pernah dibuka
+            if 'hkg1' not in st.session_state: st.session_state.hkg1 = _init_tarif
+            if 'bkg1' not in st.session_state: st.session_state.bkg1 = _init_v1
+            if 'hkg2' not in st.session_state: st.session_state.hkg2 = _init_tarif
+            if 'bkg2' not in st.session_state: st.session_state.bkg2 = _init_v2
+            if 'hkg3' not in st.session_state: st.session_state.hkg3 = _init_tarif
+            if 'bkg3' not in st.session_state: st.session_state.bkg3 = _init_v3
+
+            # Ini adalah tuas mesin yang akan menarik angka dari atas ke bawah
+            def sync_all():
+                v1 = st.session_state.top_vol_1
+                v2 = st.session_state.top_vol_2
+                v3 = st.session_state.top_vol_3
+                harga_trip = st.session_state.top_harga_trip
+                
+                # Update Volume di bawah otomatis
+                st.session_state.bkg1 = float(v1)
+                st.session_state.bkg2 = float(v2)
+                st.session_state.bkg3 = float(v3)
+                
+                # Update Harga di bawah otomatis
+                tot = v1 + v2 + v3
+                if tot > 0:
+                    tarif = float(harga_trip) / float(tot)
+                    st.session_state.hkg1 = tarif
+                    st.session_state.hkg2 = tarif
+                    st.session_state.hkg3 = tarif
+                else:
+                    st.session_state.hkg1 = 0.0
+                    st.session_state.hkg2 = 0.0
+                    st.session_state.hkg3 = 0.0
+            # --------------------------------------------
+
             col_inv1, col_inv2, col_inv3 = st.columns(3)
             with col_inv1:
-                # LOGIKA MEMBACA PLAT NOMOR DIMASUKKAN KE SINI
                 if 'No. Polisi' in data_mobil.columns:
                     data_valid_inv = data_mobil.dropna(subset=['No. Polisi', 'Tipe Mobil'])
                     pilihan_mobil_list_inv = data_valid_inv.apply(lambda row: f"{str(row['No. Polisi']).strip()} - {str(row['Tipe Mobil']).strip()}", axis=1).tolist()
@@ -734,7 +775,8 @@ try:
                 current_state['armada_inv'] = armada_inv
 
             with col_inv2:
-                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('harga_target_trip', 3000000.0)), step=100000.0)
+                # Tambahan key="top_harga_trip" dan on_change=sync_all
+                harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('harga_target_trip', 3000000.0)), step=100000.0, key="top_harga_trip", on_change=sync_all)
                 current_state['harga_target_trip'] = harga_target_trip
                 
             with col_inv3:
@@ -746,62 +788,23 @@ try:
             with col_klien1:
                 klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "Perusahaan A"))
                 current_state['klien_1'] = klien_1
-                vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=float(get_val('vol_1', 3000000.0)), step=100000.0, format="%.0f")
+                # Tambahan key dan on_change
+                vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=float(get_val('vol_1', 3000000.0)), step=100.0, format="%.0f", key="top_vol_1", on_change=sync_all)
                 current_state['vol_1'] = vol_1
             with col_klien2:
                 klien_2 = st.text_input("Nama Klien 2:", value=get_val('klien_2', "Perusahaan B"))
                 current_state['klien_2'] = klien_2
-                vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=float(get_val('vol_2', 4000000.0)), step=100000.0, format="%.0f")
+                vol_2 = st.number_input("Volume Muatan Klien 2 (cm³):", min_value=0.0, value=float(get_val('vol_2', 4000000.0)), step=100.0, format="%.0f", key="top_vol_2", on_change=sync_all)
                 current_state['vol_2'] = vol_2
             with col_klien3:
                 klien_3 = st.text_input("Nama Klien 3:", value=get_val('klien_3', "Perusahaan C"))
                 current_state['klien_3'] = klien_3
-                vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=float(get_val('vol_3', 2500000.0)), step=100000.0, format="%.0f")
+                vol_3 = st.number_input("Volume Muatan Klien 3 (cm³):", min_value=0.0, value=float(get_val('vol_3', 2500000.0)), step=100.0, format="%.0f", key="top_vol_3", on_change=sync_all)
                 current_state['vol_3'] = vol_3
             
             total_muatan_aktual = vol_1 + vol_2 + vol_3
-            
-            # MATEMATIKA TARIF DASAR (PRO-RATA LOGISTIK)
-            tarif_per_unit = 0
-            if total_muatan_aktual > 0:
-                tarif_per_unit = harga_target_trip / total_muatan_aktual
-                
             sisa_kapasitas = kapasitas_truk_inv - total_muatan_aktual
             
-            # =================================================================
-            # 🔥 SISTEM SINKRONISASI OTOMATIS (MASTER CONTROL)
-            # =================================================================
-            if 'last_tarif' not in st.session_state: st.session_state.last_tarif = tarif_per_unit
-            if 'last_vol1' not in st.session_state: st.session_state.last_vol1 = vol_1
-            if 'last_vol2' not in st.session_state: st.session_state.last_vol2 = vol_2
-            if 'last_vol3' not in st.session_state: st.session_state.last_vol3 = vol_3
-            
-            if 'hkg1' not in st.session_state: st.session_state.hkg1 = float(get_val('hkg1', tarif_per_unit))
-            if 'bkg1' not in st.session_state: st.session_state.bkg1 = float(get_val('bkg1', vol_1))
-            if 'hkg2' not in st.session_state: st.session_state.hkg2 = float(get_val('hkg2', tarif_per_unit))
-            if 'bkg2' not in st.session_state: st.session_state.bkg2 = float(get_val('bkg2', vol_2))
-            if 'hkg3' not in st.session_state: st.session_state.hkg3 = float(get_val('hkg3', tarif_per_unit))
-            if 'bkg3' not in st.session_state: st.session_state.bkg3 = float(get_val('bkg3', vol_3))
-
-            if st.session_state.last_tarif != tarif_per_unit:
-                st.session_state.hkg1 = float(tarif_per_unit)
-                st.session_state.hkg2 = float(tarif_per_unit)
-                st.session_state.hkg3 = float(tarif_per_unit)
-                st.session_state.last_tarif = tarif_per_unit
-                
-            if st.session_state.last_vol1 != vol_1:
-                st.session_state.bkg1 = float(vol_1)
-                st.session_state.last_vol1 = vol_1
-                
-            if st.session_state.last_vol2 != vol_2:
-                st.session_state.bkg2 = float(vol_2)
-                st.session_state.last_vol2 = vol_2
-                
-            if st.session_state.last_vol3 != vol_3:
-                st.session_state.bkg3 = float(vol_3)
-                st.session_state.last_vol3 = vol_3
-            # =================================================================
-
             st.markdown("---")
             if total_muatan_aktual > 0:
                 if total_muatan_aktual > kapasitas_truk_inv:
@@ -849,10 +852,8 @@ try:
                             c_hk1, c_bk1 = st.columns(2)
                             with c_hk1:
                                 hk1 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg1")
-                                current_state['hkg1'] = hk1
                             with c_bk1:
                                 bk1 = st.number_input("Total Volume:", step=100.0, key="bkg1")
-                                current_state['bkg1'] = bk1
 
                             jum1 = hk1 * bk1
                             ppn1 = jum1 * 0.11
@@ -883,10 +884,8 @@ try:
                             c_hk2, c_bk2 = st.columns(2)
                             with c_hk2:
                                 hk2 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg2")
-                                current_state['hkg2'] = hk2
                             with c_bk2:
                                 bk2 = st.number_input("Total Volume:", step=100.0, key="bkg2")
-                                current_state['bkg2'] = bk2
 
                             jum2 = hk2 * bk2
                             ppn2 = jum2 * 0.11
@@ -917,10 +916,8 @@ try:
                             c_hk3, c_bk3 = st.columns(2)
                             with c_hk3:
                                 hk3 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg3")
-                                current_state['hkg3'] = hk3
                             with c_bk3:
                                 bk3 = st.number_input("Total Volume:", step=100.0, key="bkg3")
-                                current_state['bkg3'] = bk3
 
                             jum3 = hk3 * bk3
                             ppn3 = jum3 * 0.11
