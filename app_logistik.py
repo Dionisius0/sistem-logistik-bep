@@ -62,8 +62,8 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     
     d.text((655, 60), "Tanggal Invoice", fill="black", font=f_text)
     d.text((655, 75), "No. Invoice", fill="black", font=f_text)
-    d.text((810, 60), tgl_invoice, fill="black", font=f_text)
-    d.text((810, 75), no_invoice, fill="black", font=f_text)
+    d.text((820, 60), tgl_invoice, fill="black", font=f_text)
+    d.text((820, 75), no_invoice, fill="black", font=f_text)
 
     # 3. KEPADA (ALAMAT KLIEN BISA MULTI-BARIS)
     d.text((30, 120), "Kepada", fill="black", font=f_bold)
@@ -775,7 +775,6 @@ try:
                 current_state['armada_inv'] = armada_inv
 
             with col_inv2:
-                # Tambahan key="top_harga_trip" dan on_change=sync_all
                 harga_target_trip = st.number_input("Target Total Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('harga_target_trip', 3000000.0)), step=100000.0, key="top_harga_trip", on_change=sync_all)
                 current_state['harga_target_trip'] = harga_target_trip
                 
@@ -788,7 +787,6 @@ try:
             with col_klien1:
                 klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "Perusahaan A"))
                 current_state['klien_1'] = klien_1
-                # Tambahan key dan on_change
                 vol_1 = st.number_input("Volume Muatan Klien 1 (cm³):", min_value=0.0, value=float(get_val('vol_1', 3000000.0)), step=100.0, format="%.0f", key="top_vol_1", on_change=sync_all)
                 current_state['vol_1'] = vol_1
             with col_klien2:
@@ -829,13 +827,26 @@ try:
                     st.markdown("### 2️⃣ Formulir Cetak Invoice (Bisa Diedit Manual)")
                     st.info("Sistem telah menyambungkan **Harga/Volume** dan **Total Volume** dari kalkulasi di atas secara otomatis.")
 
-                    col_inv_tgl, col_inv_no = st.columns(2)
+                    # HITUNG JUMLAH INVOICE DI DATABASE UNTUK PENOMORAN OTOMATIS
+                    jumlah_di_db = len(existing_data)
+                    urutan_selanjutnya = jumlah_di_db + 1
+
+                    col_inv_tgl, col_inv_pref, col_inv_urut = st.columns([2, 1, 1])
                     with col_inv_tgl:
                         tgl_invoice = st.text_input("Tanggal Invoice Global:", value=get_val('tgl_invoice', datetime.now().strftime("%d %B %Y")))
                         current_state['tgl_invoice'] = tgl_invoice
-                    with col_inv_no:
-                        no_invoice_dasar = st.text_input("No. Invoice Dasar (Akan otomatis ditambah urutan):", value=get_val('no_invoice_dasar', f"INV{datetime.now().strftime('%y')}-00"))
-                        current_state['no_invoice_dasar'] = no_invoice_dasar
+                    with col_inv_pref:
+                        prefix_inv = st.text_input("Kode Prefix:", value=get_val('prefix_inv', f"INV{datetime.now().strftime('%y')}-"))
+                        current_state['prefix_inv'] = prefix_inv
+                    with col_inv_urut:
+                        urut_awal = st.number_input("No. Mulai:", min_value=1, value=int(urutan_selanjutnya), step=1)
+
+                    # PRE-CALCULATE INVOICE NUMBERS
+                    no_inv_1 = f"{prefix_inv}{int(urut_awal):03d}"
+                    urut_2 = urut_awal + 1 if vol_1 > 0 else urut_awal
+                    no_inv_2 = f"{prefix_inv}{int(urut_2):03d}"
+                    urut_3 = urut_2 + 1 if vol_2 > 0 else urut_2
+                    no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
                     # 3 TAB UNTUK MENGEDIT INVOICE MASING-MASING KLIEN
                     tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 Invoice {klien_1}", f"📄 Invoice {klien_2}", f"📄 Invoice {klien_3}"])
@@ -866,7 +877,6 @@ try:
                             r3.metric("Total Tagihan", f"Rp {tot1:,.0f}")
                             st.caption(f"*Terbilang: {format_terbilang(tot1)}*")
 
-                            no_inv_1 = f"{no_invoice_dasar}1"
                             img_1 = buat_invoice_formal(no_inv_1, tgl_invoice, klien_1, alamat_1, ket_1, hk1, bk1, jum1, ppn1, tot1)
                             st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_1})", data=img_1, file_name=f"{no_inv_1.replace('/','_')}_{klien_1}.png", mime="image/png", type="primary", key="dl1")
                         else:
@@ -898,7 +908,6 @@ try:
                             r3.metric("Total Tagihan", f"Rp {tot2:,.0f}")
                             st.caption(f"*Terbilang: {format_terbilang(tot2)}*")
 
-                            no_inv_2 = f"{no_invoice_dasar}2"
                             img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk2, bk2, jum2, ppn2, tot2)
                             st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_2})", data=img_2, file_name=f"{no_inv_2.replace('/','_')}_{klien_2}.png", mime="image/png", type="primary", key="dl2")
                         else:
@@ -930,7 +939,6 @@ try:
                             r3.metric("Total Tagihan", f"Rp {tot3:,.0f}")
                             st.caption(f"*Terbilang: {format_terbilang(tot3)}*")
 
-                            no_inv_3 = f"{no_invoice_dasar}3"
                             img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk3, bk3, jum3, ppn3, tot3)
                             st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE ({klien_3})", data=img_3, file_name=f"{no_inv_3.replace('/','_')}_{klien_3}.png", mime="image/png", type="primary", key="dl3")
                         else:
@@ -940,17 +948,20 @@ try:
                     # FITUR DATABASE CSV KESELURUHAN (MENYIMPAN DATA PARENT / PRO-RATA)
                     if st.button("🚀 MENCETAK INVOICE KE BUKU BESAR (CSV)", type="primary"):
                         try:
-                            new_data = pd.DataFrame([{
-                                "Waktu_Input": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "Armada": armada_inv, "Total_Harga_Trip": harga_target_trip,
-                                "Klien_1": klien_1, "Volume_1": vol_1, "Tagihan_1": tagihan_1,
-                                "Klien_2": klien_2, "Volume_2": vol_2, "Tagihan_2": tagihan_2,
-                                "Klien_3": klien_3, "Volume_3": vol_3, "Tagihan_3": tagihan_3
-                            }])
-                            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-                            updated_df.to_csv(NAMA_FILE_DB, index=False)
-                            st.success("✅ BERHASIL! Rangkuman Tagihan Pro-Rata telah dicatat ke Laporan Database Lokal.")
-                            st.balloons()
+                            data_simpan = []
+                            waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            
+                            if vol_1 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": no_inv_1, "Nama_Klien": klien_1, "Keterangan": ket_1, "Harga_Volume": hk1, "Total_Volume": bk1, "Jumlah": jum1, "PPN": ppn1, "Total_Akhir": tot1})
+                            if vol_2 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": no_inv_2, "Nama_Klien": klien_2, "Keterangan": ket_2, "Harga_Volume": hk2, "Total_Volume": bk2, "Jumlah": jum2, "PPN": ppn2, "Total_Akhir": tot2})
+                            if vol_3 > 0: data_simpan.append({"Waktu_Input": waktu, "No_Invoice": no_inv_3, "Nama_Klien": klien_3, "Keterangan": ket_3, "Harga_Volume": hk3, "Total_Volume": bk3, "Jumlah": jum3, "PPN": ppn3, "Total_Akhir": tot3})
+
+                            if len(data_simpan) > 0:
+                                new_data = pd.DataFrame(data_simpan)
+                                updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+                                updated_df.to_csv(NAMA_FILE_DB, index=False)
+                                st.success("✅ BERHASIL! Seluruh data Invoice yang aktif telah dibukukan.")
+                                st.balloons()
+                                st.rerun()
                         except Exception as e:
                             st.error(f"❌ Gagal menyimpan data: {e}")
 
