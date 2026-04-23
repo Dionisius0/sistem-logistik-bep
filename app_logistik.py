@@ -152,15 +152,27 @@ SCOPES = [
 
 sh_invoice = None
 try:
-    # Membaca file kunci.json yang tadi kita masukkan
-    credentials = Credentials.from_service_account_file("kunci.json", scopes=SCOPES)
-    gc = gspread.authorize(credentials)
-    
-    # Membuka file Google Sheets berdasarkan namanya
-    sh_invoice = gc.open("database_invoice_formal").sheet1
-    st.sidebar.success("🌐 Sistem Terhubung ke Cloud (Google Sheets)")
+    # SISTEM CERDAS: Deteksi apakah sedang di Cloud atau di Laptop
+    if "gcp_service_account" in st.secrets:
+        # Di Streamlit Cloud
+        kredensial_dict = dict(st.secrets["gcp_service_account"])
+        
+        # Perbaikan Khusus: Menerjemahkan \n menjadi Enter sungguhan agar bisa dibaca Google
+        if "\\n" in kredensial_dict["private_key"]:
+            kredensial_dict["private_key"] = kredensial_dict["private_key"].replace("\\n", "\n")
+            
+        credentials = Credentials.from_service_account_info(kredensial_dict, scopes=SCOPES)
+        gc = gspread.authorize(credentials)
+        sh_invoice = gc.open("database_invoice_formal").sheet1
+        st.sidebar.success("🌐 Sistem Terhubung ke Cloud (Google Sheets)")
+    else:
+        # Di Laptop Lokal
+        credentials = Credentials.from_service_account_file("kunci.json", scopes=SCOPES)
+        gc = gspread.authorize(credentials)
+        sh_invoice = gc.open("database_invoice_formal").sheet1
+        st.sidebar.success("🌐 Sistem Terhubung ke Laptop Lokal")
 except Exception as e:
-    st.sidebar.error(f"❌ Gagal koneksi ke Google Sheets. Pastikan kunci.json benar dan email robot sudah di-share: {e}")
+    st.sidebar.error(f"❌ Gagal koneksi (Cek pengaturan Secrets/JSON): {e}")
 
 
 # --- DATABASE LOKAL (Jadwal & Fallback) ---
@@ -499,12 +511,11 @@ try:
                     st.warning("⚠️ Jadwal masih kosong. Silakan atur rute terlebih dahulu.")
 
     # =====================================================================
-    # HALAMAN 3 & 4 (DIPERSINGKAT UNTUK FOKUS KE INVOICE GOOGLE SHEETS)
+    # HALAMAN 3 & 4
     # =====================================================================
     elif menu_halaman == "📈 Dashboard Eksekutif & KPI":
         st.subheader("📈 Pusat Kendali Operasional (Dashboard Eksekutif)")
         st.info("Fitur Analisis Performa sedang berjalan.")
-        # ... (Fitur ini tetap berjalan seperti biasa, saya persingkat di tampilan kodingan ini agar kamu mudah mencopy)
 
     elif menu_halaman == "⚖️ Analisis Kinerja & Kapasitas (Ton-KM)":
         st.subheader("⚖️ Analisis Unit Economics (Metrik Ton-KM)")
@@ -540,18 +551,19 @@ try:
             if 'bkg3' not in st.session_state: st.session_state.bkg3 = _init_v3
 
             def sync_all():
-                v1 = st.session_state.top_vol_1
-                v2 = st.session_state.top_vol_2
-                v3 = st.session_state.top_vol_3
-                harga_trip = st.session_state.top_harga_trip
+                # Gunakan .get() agar aplikasi tidak crash jika kotak belum digambar
+                v1 = float(st.session_state.get("top_vol_1", 3000000.0))
+                v2 = float(st.session_state.get("top_vol_2", 4000000.0))
+                v3 = float(st.session_state.get("top_vol_3", 2500000.0))
+                harga_trip = float(st.session_state.get("top_harga_trip", 3000000.0))
                 
-                st.session_state.bkg1 = float(v1)
-                st.session_state.bkg2 = float(v2)
-                st.session_state.bkg3 = float(v3)
+                st.session_state.bkg1 = v1
+                st.session_state.bkg2 = v2
+                st.session_state.bkg3 = v3
                 
                 tot = v1 + v2 + v3
                 if tot > 0:
-                    tarif = float(harga_trip) / float(tot)
+                    tarif = harga_trip / tot
                     st.session_state.hkg1 = tarif
                     st.session_state.hkg2 = tarif
                     st.session_state.hkg3 = tarif
@@ -636,7 +648,7 @@ try:
                     if vol_1 > 0:
                         alamat_1 = st.text_area("Alamat Klien 1:", value=get_val('al1', "Alamat Klien 1..."), height=100, key="al1")
                         current_state['al1'] = alamat_1
-                        ket_1 = st.text_input("Keterangan:", value=get_val('ket1', "Biaya Jasa"), key="ket1")
+                        ket_1 = st.text_input("Keterangan 1:", value=get_val('ket1', "Biaya Jasa"), key="ket1")
                         current_state['ket1'] = ket_1
                         c_hk1, c_bk1 = st.columns(2)
                         with c_hk1: hk1 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg1")
@@ -650,11 +662,11 @@ try:
                     if vol_2 > 0:
                         alamat_2 = st.text_area("Alamat Klien 2:", value=get_val('al2', "Alamat Klien 2..."), height=100, key="al2")
                         current_state['al2'] = alamat_2
-                        ket_2 = st.text_input("Keterangan:", value=get_val('ket2', "Biaya Jasa"), key="ket2")
+                        ket_2 = st.text_input("Keterangan 2:", value=get_val('ket2', "Biaya Jasa"), key="ket2")
                         current_state['ket2'] = ket_2
                         c_hk2, c_bk2 = st.columns(2)
-                        with c_hk2: hk2 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg2")
-                        with c_bk2: bk2 = st.number_input("Total Volume:", step=100.0, key="bkg2")
+                        with c_hk2: hk2 = st.number_input("Harga / Volume 2 (Rp):", step=10.0, key="hkg2")
+                        with c_bk2: bk2 = st.number_input("Total Volume 2:", step=100.0, key="bkg2")
                         jum2, ppn2, tot2 = hk2 * bk2, (hk2 * bk2) * 0.11, (hk2 * bk2) * 1.11
                         img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk2, bk2, jum2, ppn2, tot2)
                         st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_2, file_name=f"{no_inv_2}.png", mime="image/png", key="dl2")
@@ -664,11 +676,11 @@ try:
                     if vol_3 > 0:
                         alamat_3 = st.text_area("Alamat Klien 3:", value=get_val('al3', "Alamat Klien 3..."), height=100, key="al3")
                         current_state['al3'] = alamat_3
-                        ket_3 = st.text_input("Keterangan:", value=get_val('ket3', "Biaya Jasa"), key="ket3")
+                        ket_3 = st.text_input("Keterangan 3:", value=get_val('ket3', "Biaya Jasa"), key="ket3")
                         current_state['ket3'] = ket_3
                         c_hk3, c_bk3 = st.columns(2)
-                        with c_hk3: hk3 = st.number_input("Harga / Volume (Rp):", step=10.0, key="hkg3")
-                        with c_bk3: bk3 = st.number_input("Total Volume:", step=100.0, key="bkg3")
+                        with c_hk3: hk3 = st.number_input("Harga / Volume 3 (Rp):", step=10.0, key="hkg3")
+                        with c_bk3: bk3 = st.number_input("Total Volume 3:", step=100.0, key="bkg3")
                         jum3, ppn3, tot3 = hk3 * bk3, (hk3 * bk3) * 0.11, (hk3 * bk3) * 1.11
                         img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk3, bk3, jum3, ppn3, tot3)
                         st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_3, file_name=f"{no_inv_3}.png", mime="image/png", key="dl3")
