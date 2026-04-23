@@ -6,6 +6,7 @@ import os
 import json
 from datetime import datetime
 import math
+import time
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -152,21 +153,15 @@ SCOPES = [
 
 sh_invoice = None
 try:
-    # SISTEM CERDAS: Deteksi apakah sedang di Cloud atau di Laptop
     if "gcp_service_account" in st.secrets:
-        # Di Streamlit Cloud
         kredensial_dict = dict(st.secrets["gcp_service_account"])
-        
-        # Perbaikan Khusus: Menerjemahkan \n menjadi Enter sungguhan agar bisa dibaca Google
         if "\\n" in kredensial_dict["private_key"]:
             kredensial_dict["private_key"] = kredensial_dict["private_key"].replace("\\n", "\n")
-            
         credentials = Credentials.from_service_account_info(kredensial_dict, scopes=SCOPES)
         gc = gspread.authorize(credentials)
         sh_invoice = gc.open("database_invoice_formal").sheet1
         st.sidebar.success("🌐 Sistem Terhubung ke Cloud (Google Sheets)")
     else:
-        # Di Laptop Lokal
         credentials = Credentials.from_service_account_file("kunci.json", scopes=SCOPES)
         gc = gspread.authorize(credentials)
         sh_invoice = gc.open("database_invoice_formal").sheet1
@@ -282,7 +277,6 @@ try:
     if menu_halaman == "📊 Kalkulator BEP (Utama)":
         st.sidebar.header("⚙️ Pengaturan Data Rute")
         pilihan_mobil_list = data_mobil['Tipe Mobil'].dropna().unique().tolist()
-        
         def_mobil_bep = get_val('mobil_terpilih_bep', pilihan_mobil_list[0])
         if def_mobil_bep not in pilihan_mobil_list: def_mobil_bep = pilihan_mobil_list[0]
         mobil_terpilih_bep = st.sidebar.selectbox("Pilih Armada (Spesifikasi):", pilihan_mobil_list, index=pilihan_mobil_list.index(def_mobil_bep))
@@ -551,7 +545,6 @@ try:
             if 'bkg3' not in st.session_state: st.session_state.bkg3 = _init_v3
 
             def sync_all():
-                # Gunakan .get() agar aplikasi tidak crash jika kotak belum digambar
                 v1 = float(st.session_state.get("top_vol_1", 3000000.0))
                 v2 = float(st.session_state.get("top_vol_2", 4000000.0))
                 v3 = float(st.session_state.get("top_vol_3", 2500000.0))
@@ -612,17 +605,18 @@ try:
             if total_muatan_aktual > 0:
                 st.markdown("### 2️⃣ Formulir Cetak Invoice")
 
-                # --- LOGIKA PENOMORAN DARI GOOGLE SHEETS ---
+                # --- 1. LOGIKA PENOMORAN OTOMATIS (AUTO-INCREMENT) ---
                 try:
                     if sh_invoice:
-                        # Mengambil semua baris dari Google Sheets untuk menghitung jumlah
+                        # Aplikasi menghitung sendiri berapa baris yang sudah terisi di Google Sheets
                         semua_data_gsheets = sh_invoice.get_all_records()
                         jumlah_di_db = len(semua_data_gsheets)
                     else:
-                        jumlah_di_db = len(existing_data) # Pakai data lokal jika gagal
+                        jumlah_di_db = len(existing_data)
                 except:
                     jumlah_di_db = len(existing_data)
                 
+                # Menentukan angka mulai secara otomatis tanpa perlu diketik manual
                 urutan_selanjutnya = jumlah_di_db + 1
 
                 col_inv_tgl, col_inv_pref, col_inv_urut = st.columns([2, 1, 1])
@@ -633,7 +627,9 @@ try:
                     prefix_inv = st.text_input("Kode Prefix:", value=get_val('prefix_inv', f"INV{datetime.now().strftime('%y')}-"))
                     current_state['prefix_inv'] = prefix_inv
                 with col_inv_urut:
-                    urut_awal = st.number_input("No. Mulai:", min_value=1, value=int(urutan_selanjutnya), step=1)
+                    # Kotak ini sekarang terkunci (disabled=True) agar berjalan otomatis
+                    st.text_input("No. Mulai (Otomatis):", value=str(urutan_selanjutnya), disabled=True)
+                    urut_awal = urutan_selanjutnya
 
                 no_inv_1 = f"{prefix_inv}{int(urut_awal):03d}"
                 urut_2 = urut_awal + 1 if vol_1 > 0 else urut_awal
@@ -655,7 +651,7 @@ try:
                         with c_bk1: bk1 = st.number_input("Total Volume:", step=100.0, key="bkg1")
                         jum1, ppn1, tot1 = hk1 * bk1, (hk1 * bk1) * 0.11, (hk1 * bk1) * 1.11
                         img_1 = buat_invoice_formal(no_inv_1, tgl_invoice, klien_1, alamat_1, ket_1, hk1, bk1, jum1, ppn1, tot1)
-                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_1, file_name=f"{no_inv_1}.png", mime="image/png", key="dl1")
+                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_1, file_name=f"{no_inv_1.replace('/','-')}.png", mime="image/png", key="dl1")
 
                 # KLIEN 2
                 with tab_inv2:
@@ -669,7 +665,7 @@ try:
                         with c_bk2: bk2 = st.number_input("Total Volume 2:", step=100.0, key="bkg2")
                         jum2, ppn2, tot2 = hk2 * bk2, (hk2 * bk2) * 0.11, (hk2 * bk2) * 1.11
                         img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk2, bk2, jum2, ppn2, tot2)
-                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_2, file_name=f"{no_inv_2}.png", mime="image/png", key="dl2")
+                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_2, file_name=f"{no_inv_2.replace('/','-')}.png", mime="image/png", key="dl2")
 
                 # KLIEN 3
                 with tab_inv3:
@@ -683,31 +679,57 @@ try:
                         with c_bk3: bk3 = st.number_input("Total Volume 3:", step=100.0, key="bkg3")
                         jum3, ppn3, tot3 = hk3 * bk3, (hk3 * bk3) * 0.11, (hk3 * bk3) * 1.11
                         img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk3, bk3, jum3, ppn3, tot3)
-                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_3, file_name=f"{no_inv_3}.png", mime="image/png", key="dl3")
+                        st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE", data=img_3, file_name=f"{no_inv_3.replace('/','-')}.png", mime="image/png", key="dl3")
 
                 st.markdown("---")
                 
-                # --- TOMBOL AJAIB: MENGIRIM DATA KE GOOGLE SHEETS ---
+                # --- 2. TOMBOL MENCETAK DENGAN AUTO-REFRESH ---
                 if st.button("🚀 MENCETAK INVOICE KE BUKU BESAR (GOOGLE SHEETS)", type="primary"):
                     try:
                         data_simpan_ke_awan = []
                         waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
-                        # Menyusun data ke dalam bentuk list agar bisa dibaca Google Sheets
                         if vol_1 > 0: data_simpan_ke_awan.append([waktu, no_inv_1, klien_1, ket_1, hk1, bk1, jum1, ppn1, tot1])
                         if vol_2 > 0: data_simpan_ke_awan.append([waktu, no_inv_2, klien_2, ket_2, hk2, bk2, jum2, ppn2, tot2])
                         if vol_3 > 0: data_simpan_ke_awan.append([waktu, no_inv_3, klien_3, ket_3, hk3, bk3, jum3, ppn3, tot3])
 
                         if len(data_simpan_ke_awan) > 0:
                             if sh_invoice:
-                                # Mengirim data ke awan (Google Sheets)
                                 sh_invoice.append_rows(data_simpan_ke_awan)
-                                st.success("✅ BERHASIL! Data telah terbang dan tercatat aman di Google Sheets milikmu.")
+                                st.success("✅ BERHASIL! Data telah terbang dan tercatat aman di Google Sheets milikmu. Sistem akan me-refresh untuk menyiapkan nomor invoice berikutnya...")
                                 st.balloons()
+                                
+                                # Jeda 2 detik agar tulisan sukses terlihat, lalu refresh otomatis!
+                                time.sleep(2)
+                                st.rerun() 
                             else:
                                 st.error("🚨 Gagal menyambung ke Google Sheets. Cek pengaturan kunci JSON.")
                     except Exception as e:
                         st.error(f"❌ Gagal mengirim data ke Google Sheets: {e}")
+
+                # --- 3. ZONA BERBAHAYA (TOMBOL RESET DATABASE) ---
+                st.markdown("---")
+                st.markdown("### ⚠️ Zona Berbahaya (Reset Database)")
+                konfirmasi_hapus = st.checkbox("Saya yakin ingin menghapus SELURUH data invoice di Google Sheets.")
+                if st.button("🚨 HAPUS SEMUA DATA INVOICE", type="primary"):
+                    if konfirmasi_hapus:
+                        try:
+                            if sh_invoice:
+                                sh_invoice.clear() # Menghapus semua isi file
+                                # Menulis ulang baris judul (Header) agar siap diisi lagi
+                                headers = ["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"]
+                                sh_invoice.append_row(headers)
+                                st.success("✅ Database Google Sheets berhasil dikosongkan dan di-reset ke awal!")
+                                
+                                # Jeda dan refresh agar nomor invoice kembali ke angka 1
+                                time.sleep(1.5)
+                                st.rerun()
+                            else:
+                                st.error("🚨 Gagal terhubung ke Google Sheets.")
+                        except Exception as e:
+                            st.error(f"❌ Gagal mereset database: {e}")
+                    else:
+                        st.warning("Centang dulu kotak konfirmasi di atas sebelum menekan tombol hapus.")
 
 except Exception as e:
     st.error(f"Terjadi kesalahan saat memproses data: {e}")
