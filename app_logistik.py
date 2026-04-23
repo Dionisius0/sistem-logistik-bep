@@ -709,63 +709,124 @@ try:
             
             st.markdown("---")
             if (vol_1 + vol_2 + vol_3) > 0:
-                st.markdown("### 2️⃣ Formulir & Ringkasan Invoice")
+                st.markdown("### 2️⃣ Formulir & Rincian Invoice per Klien")
 
-                # --- AUTO-INCREMENT LOGIC ---
+                # --- MENGAMBIL ANGKA BASE DARI DATABASE UNTUK DEFAULT ---
                 try:
                     urutan_selanjutnya = len(sh_invoice.get_all_records()) + 1 if sh_invoice else 1
                 except: urutan_selanjutnya = 1
 
-                col_inv_tgl, col_inv_pref, col_inv_urut = st.columns([2, 1, 1])
+                col_inv_tgl, col_inv_pref = st.columns([2, 1])
                 with col_inv_tgl: tgl_invoice = st.text_input("Tanggal Invoice Global:", value=datetime.now().strftime("%d %B %Y"))
                 with col_inv_pref: prefix_inv = st.text_input("Kode Prefix:", value=f"INV{datetime.now().strftime('%y')}-")
-                with col_inv_urut: st.text_input("No. Mulai (Otomatis):", value=str(urutan_selanjutnya), disabled=True)
 
                 tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 {klien_1}", f"📄 {klien_2}", f"📄 {klien_3}"])
                 
-                def render_invoice_form(id_tab, klien, vol, urut_idx):
-                    if vol > 0:
-                        no_inv = f"{prefix_inv}{int(urutan_selanjutnya + urut_idx):03d}"
-                        alamat = st.text_area(f"Alamat {klien}:", value=get_val(f'al{id_tab}', f"Alamat {klien}..."), height=80, key=f"al{id_tab}")
-                        ket = st.text_input(f"Keterangan {klien}:", value="Biaya Jasa Angkutan", key=f"ket{id_tab}")
+                # --- VARIABEL PENYIMPANAN UNTUK SIMPAN MASSAL ---
+                data_untuk_massal = []
+                
+                # --- KLIEN 1 ---
+                with tab_inv1:
+                    if vol_1 > 0:
+                        # Nomor ini bisa diedit oleh user agar tidak terjadi lompatan!
+                        no_inv_1 = st.text_input(f"No. Invoice (Bisa Diedit):", value=f"{prefix_inv}{int(urutan_selanjutnya):03d}", key="inv_edit_1")
+                        alamat_1 = st.text_area(f"Alamat {klien_1}:", value=get_val('al1', "Alamat Klien 1..."), height=80, key="al1")
+                        ket_1 = st.text_input(f"Keterangan:", value="Biaya Jasa", key="ket1")
                         c1, c2 = st.columns(2)
-                        with c1: hk = st.number_input(f"Harga / Volume {klien}:", step=1.0, key=f"hkg{id_tab}")
-                        with c2: bk = st.number_input(f"Total Volume {klien}:", step=1.0, key=f"bkg{id_tab}")
+                        with c1: hk_1 = st.number_input(f"Harga / Volume:", step=1.0, key="hkg1")
+                        with c2: bk_1 = st.number_input(f"Total Volume:", step=1.0, key="bkg1")
                         
-                        # --- PERHITUNGAN HARGA ---
-                        subtotal = hk * bk
-                        ppn = subtotal * 0.11
-                        total_akhir = subtotal + ppn
+                        # Perhitungan
+                        sub_1 = hk_1 * bk_1
+                        ppn_1 = sub_1 * 0.11
+                        tot_1 = sub_1 + ppn_1
                         
-                        st.info(f"**💰 Ringkasan Biaya {klien}:**\n\n"
-                                f"• Subtotal (Harga x Vol): **Rp {subtotal:,.0f}**\n\n"
-                                f"• PPN (11%): **Rp {ppn:,.0f}**\n\n"
-                                f"• **Total Akhir: Rp {total_akhir:,.0f}**")
+                        # Menyimpan data ini jika nanti tombol Simpan Massal ditekan
+                        data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_1, klien_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1])
+
+                        st.info(f"**💰 Rincian Biaya {klien_1}:**\n\n"
+                                f"• Harga/Volume x Total Volume = **Rp {sub_1:,.0f}**\n\n"
+                                f"• PPN (11%) = **Rp {ppn_1:,.0f}**\n\n"
+                                f"• **TOTAL AKHIR = Rp {tot_1:,.0f}**")
                         
-                        col_btn1, col_btn2 = st.columns(2)
-                        
-                        # LOGIKA SAVE SAJA
-                        if col_btn1.button(f"💾 SIMPAN DATA {klien}", key=f"save_only_{id_tab}"):
+                        img_1 = buat_invoice_formal(no_inv_1, tgl_invoice, klien_1, alamat_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1)
+                        if st.download_button(label=f"🚀 CETAK & SAVE {klien_1} SAJA", data=img_1, file_name=f"{no_inv_1.replace('/','-')}.png", mime="image/png", key="dl_1", type="primary"):
                             if sh_invoice:
-                                sh_invoice.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv, klien, ket, hk, bk, subtotal, ppn, total_akhir])
-                                st.success(f"✅ Data {klien} Berhasil Disimpan!"); time.sleep(1); st.rerun()
+                                sh_invoice.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_1, klien_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1])
 
-                        # LOGIKA SAVE & CETAK (MENJADI SATU)
-                        img_data = buat_invoice_formal(no_inv, tgl_invoice, klien, alamat, ket, hk, bk, subtotal, ppn, total_akhir)
-                        if col_btn2.download_button(label=f"🚀 SAVE & CETAK {klien}", data=img_data, file_name=f"{no_inv.replace('/','-')}.png", mime="image/png", key=f"dl_{id_tab}"):
+                # --- KLIEN 2 ---
+                with tab_inv2:
+                    if vol_2 > 0:
+                        no_inv_2 = st.text_input(f"No. Invoice (Bisa Diedit):", value=f"{prefix_inv}{int(urutan_selanjutnya + 1):03d}", key="inv_edit_2")
+                        alamat_2 = st.text_area(f"Alamat {klien_2}:", value=get_val('al2', "Alamat Klien 2..."), height=80, key="al2")
+                        ket_2 = st.text_input(f"Keterangan:", value="Biaya Jasa", key="ket2")
+                        c1, c2 = st.columns(2)
+                        with c1: hk_2 = st.number_input(f"Harga / Volume:", step=1.0, key="hkg2")
+                        with c2: bk_2 = st.number_input(f"Total Volume:", step=1.0, key="bkg2")
+                        
+                        sub_2 = hk_2 * bk_2
+                        ppn_2 = sub_2 * 0.11
+                        tot_2 = sub_2 + ppn_2
+                        
+                        data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_2, klien_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2])
+
+                        st.info(f"**💰 Rincian Biaya {klien_2}:**\n\n"
+                                f"• Harga/Volume x Total Volume = **Rp {sub_2:,.0f}**\n\n"
+                                f"• PPN (11%) = **Rp {ppn_2:,.0f}**\n\n"
+                                f"• **TOTAL AKHIR = Rp {tot_2:,.0f}**")
+                        
+                        img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2)
+                        if st.download_button(label=f"🚀 CETAK & SAVE {klien_2} SAJA", data=img_2, file_name=f"{no_inv_2.replace('/','-')}.png", mime="image/png", key="dl_2", type="primary"):
                             if sh_invoice:
-                                sh_invoice.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv, klien, ket, hk, bk, subtotal, ppn, total_akhir])
-                                # Streamlit akan otomatis rerun setelah download selesai
+                                sh_invoice.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_2, klien_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2])
 
-                with tab_inv1: render_invoice_form(1, klien_1, vol_1, 0)
-                with tab_inv2: render_invoice_form(2, klien_2, vol_2, 1 if vol_1 > 0 else 0)
-                with tab_inv3: render_invoice_form(3, klien_3, vol_3, (1 if vol_1 > 0 else 0) + (1 if vol_2 > 0 else 0))
+                # --- KLIEN 3 ---
+                with tab_inv3:
+                    if vol_3 > 0:
+                        no_inv_3 = st.text_input(f"No. Invoice (Bisa Diedit):", value=f"{prefix_inv}{int(urutan_selanjutnya + 2):03d}", key="inv_edit_3")
+                        alamat_3 = st.text_area(f"Alamat {klien_3}:", value=get_val('al3', "Alamat Klien 3..."), height=80, key="al3")
+                        ket_3 = st.text_input(f"Keterangan:", value="Biaya Jasa", key="ket3")
+                        c1, c2 = st.columns(2)
+                        with c1: hk_3 = st.number_input(f"Harga / Volume:", step=1.0, key="hkg3")
+                        with c2: bk_3 = st.number_input(f"Total Volume:", step=1.0, key="bkg3")
+                        
+                        sub_3 = hk_3 * bk_3
+                        ppn_3 = sub_3 * 0.11
+                        tot_3 = sub_3 + ppn_3
+                        
+                        data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_3, klien_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3])
 
-                # --- ZONA RESET ---
+                        st.info(f"**💰 Rincian Biaya {klien_3}:**\n\n"
+                                f"• Harga/Volume x Total Volume = **Rp {sub_3:,.0f}**\n\n"
+                                f"• PPN (11%) = **Rp {ppn_3:,.0f}**\n\n"
+                                f"• **TOTAL AKHIR = Rp {tot_3:,.0f}**")
+                        
+                        img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3)
+                        if st.download_button(label=f"🚀 CETAK & SAVE {klien_3} SAJA", data=img_3, file_name=f"{no_inv_3.replace('/','-')}.png", mime="image/png", key="dl_3", type="primary"):
+                            if sh_invoice:
+                                sh_invoice.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_3, klien_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3])
+
+
+                # --- 3. TOMBOL SIMPAN MASSAL (TANPA CETAK) ---
                 st.markdown("---")
-                st.markdown("### ⚠️ Pengaturan Database")
-                if st.checkbox("Aktifkan Tombol Reset (Hapus Semua Data)"):
-                    if st.button("🚨 KOSONGKAN GOOGLE SHEETS SEKARANG", type="primary"):
+                st.markdown("### 💾 Aksi Massal Database")
+                if st.button("📥 SIMPAN KETIGA DATA KLIEN (TANPA CETAK)", use_container_width=True):
+                    try:
+                        if sh_invoice and len(data_untuk_massal) > 0:
+                            sh_invoice.append_rows(data_untuk_massal)
+                            st.success("✅ Ketiga data berhasil disimpan sekaligus ke Google Sheets!")
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("🚨 Gagal menyambung ke Google Sheets atau tidak ada data yang diisi.")
+                    except Exception as e:
+                        st.error(f"❌ Terjadi kesalahan: {e}")
+
+                # --- 4. ZONA RESET ---
+                st.markdown("---")
+                st.markdown("### ⚠️ Pengaturan Database Lanjutan")
+                if st.checkbox("Aktifkan Tombol Reset (Hapus Semua Data Invoice)"):
+                    if st.button("🚨 KOSONGKAN GOOGLE SHEETS SEKARANG"):
                         if sh_invoice:
                             sh_invoice.clear()
                             sh_invoice.append_row(["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"])
@@ -776,4 +837,4 @@ try:
     with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
 
 except Exception as e:
-    st.error(f"Terjadi kesalahan sistem: {e}")
+    st.error(f"Terjadi kesalahan sistem internal: {e}")
