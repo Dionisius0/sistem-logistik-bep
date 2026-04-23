@@ -139,7 +139,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
 
 
 # =====================================================================
-# BAGIAN 1: JUDUL & KONEKSI GOOGLE SHEETS DENGAN DRAFT PERMANEN
+# BAGIAN 1: JUDUL & KONEKSI GOOGLE SHEETS (SISTEM MEMORI ANTI-SPAM API)
 # =====================================================================
 st.set_page_config(page_title="Tango Logistik - Dasbor Operasional", layout="wide")
 st.title("🚚 Sistem Manajemen Ekspedisi (Tango Logistik)")
@@ -147,40 +147,61 @@ st.write("Aplikasi Pintar Pengendalian Biaya, Target Laba, dan KPI Armada.")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
-sh = None
-sh_invoice = None
-cloud_draft = {}
-
-try:
-    if "gcp_service_account" in st.secrets:
-        kredensial_dict = dict(st.secrets["gcp_service_account"])
-        if "\\n" in kredensial_dict["private_key"]:
-            kredensial_dict["private_key"] = kredensial_dict["private_key"].replace("\\n", "\n")
-        credentials = Credentials.from_service_account_info(kredensial_dict, scopes=SCOPES)
-        gc = gspread.authorize(credentials)
-        sh = gc.open("database_invoice_formal")
-        sh_invoice = sh.sheet1
-        st.sidebar.success("🌐 Sistem Terhubung ke Cloud (Google Sheets)")
-    else:
-        credentials = Credentials.from_service_account_file("kunci.json", scopes=SCOPES)
-        gc = gspread.authorize(credentials)
-        sh = gc.open("database_invoice_formal")
-        sh_invoice = sh.sheet1
-        st.sidebar.success("🌐 Sistem Terhubung ke Laptop Lokal")
+# Menggunakan Session State untuk menyimpan koneksi agar tidak spam Google API (Mengatasi Error 429)
+if "gsheets_connected" not in st.session_state:
+    try:
+        if "gcp_service_account" in st.secrets:
+            kredensial_dict = dict(st.secrets["gcp_service_account"])
+            if "\\n" in kredensial_dict["private_key"]:
+                kredensial_dict["private_key"] = kredensial_dict["private_key"].replace("\\n", "\n")
+            credentials = Credentials.from_service_account_info(kredensial_dict, scopes=SCOPES)
+            gc = gspread.authorize(credentials)
+            sh = gc.open("database_invoice_formal")
+            st.session_state.sh = sh
+            st.session_state.sh_invoice = sh.sheet1
+        else:
+            credentials = Credentials.from_service_account_file("kunci.json", scopes=SCOPES)
+            gc = gspread.authorize(credentials)
+            sh = gc.open("database_invoice_formal")
+            st.session_state.sh = sh
+            st.session_state.sh_invoice = sh.sheet1
+            
+        st.session_state.gsheets_connected = True
         
-    # Mengambil Draft Permanen dari Cloud jika ada
-    if sh:
+        # 1. BACA DRAFT SEKALI SAJA SAAT AWAL BUKA
+        st.session_state.cloud_draft = {}
         try:
-            ws_draft = sh.worksheet("Pengaturan_Draft")
+            ws_draft = st.session_state.sh.worksheet("Pengaturan_Draft")
             records = ws_draft.get_all_values()
             for row in records:
                 if len(row) == 2:
-                    cloud_draft[row[0]] = row[1]
+                    st.session_state.cloud_draft[row[0]] = row[1]
         except Exception:
-            pass # Belum ada tab Pengaturan_Draft, biarkan saja
+            pass # Belum ada tab Pengaturan_Draft
             
-except Exception as e:
-    st.sidebar.error(f"❌ Gagal koneksi (Cek Secrets/JSON): {e}")
+        # 2. BACA JUMLAH INVOICE SEKALI SAJA SAAT AWAL BUKA (Menggunakan get_all_values yang lebih ringan)
+        try:
+            # Hitung jumlah baris di GSheets (termasuk header).
+            st.session_state.invoice_base_count = len(st.session_state.sh_invoice.get_all_values())
+        except Exception:
+            st.session_state.invoice_base_count = 1
+
+    except Exception as e:
+        st.session_state.gsheets_connected = False
+        st.session_state.gsheets_error = str(e)
+        st.session_state.sh = None
+        st.session_state.sh_invoice = None
+
+# MENGAMBIL VARIABEL DARI MEMORI (Bukan minta ke Google lagi)
+sh = st.session_state.get("sh")
+sh_invoice = st.session_state.get("sh_invoice")
+cloud_draft = st.session_state.get("cloud_draft", {})
+
+if st.session_state.get("gsheets_connected"):
+    st.sidebar.success("🌐 Sistem Terhubung ke Cloud (Stabil)")
+else:
+    st.sidebar.error(f"❌ Gagal koneksi API: {st.session_state.get('gsheets_error')}")
+
 
 # --- DATABASE LOKAL AUTO-SAVE (SEBAGAI CADANGAN) ---
 NAMA_FILE_DB = "database_invoice_formal.csv"
@@ -713,7 +734,7 @@ try:
         # TOMBOL AJAIB PENYELAMAT REFRESH
         col_draft1, col_draft2 = st.columns([3, 1])
         with col_draft2:
-            if st.button("💾 SIMPAN SEBAGAI DRAFT PERMANEN", help="Simpan nama klien dan volume saat ini ke Google Sheets agar aman dari refresh."):
+            if st.button("💾 SIMPAN SEBAGAI DRAFT PERMANEN", help="Simpan nama klien dan volume ke Google Sheets agar tidak hilang saat di-refresh."):
                 if sh:
                     try:
                         try: ws_draft = sh.worksheet("Pengaturan_Draft")
@@ -722,10 +743,11 @@ try:
                         keys_to_save = ['armada_inv', 'klien_1', 'top_vol_1', 'klien_2', 'top_vol_2', 'klien_3', 'top_vol_3', 'top_harga_trip', 'kapasitas_truk_inv']
                         data_list = []
                         for k in keys_to_save:
-                            # Ambil nilai yang sedang diketik user di layar saat ini
                             val = st.session_state.get(k, current_state.get(k, get_val(k, "")))
                             data_list.append([k, str(val)])
-                        
+                            # Update ke memori lokal juga agar langsung terasa efeknya
+                            st.session_state.cloud_draft[k] = val 
+                            
                         ws_draft.clear()
                         ws_draft.append_rows(data_list)
                         st.success("✅ Angka dan Teks berhasil dikunci di Awan!")
@@ -776,13 +798,8 @@ try:
         if (vol_1 + vol_2 + vol_3) > 0:
             st.markdown("### 2️⃣ Formulir & Rincian Invoice per Klien")
 
-            # --- MENGHITUNG JUMLAH BARIS REAL-TIME DARI GOOGLE SHEETS ---
-            try:
-                jumlah_di_db = len(sh_invoice.get_all_records()) if sh_invoice else len(existing_data)
-            except:
-                jumlah_di_db = len(existing_data)
-            
-            base_urut = jumlah_di_db + 1
+            # Mengambil data hitungan dari memori agar Google tidak dilimit 429
+            base_urut = st.session_state.get("invoice_base_count", 1)
 
             col_inv_tgl, col_inv_pref = st.columns([2, 1])
             with col_inv_tgl: tgl_invoice = st.text_input("Tanggal Invoice Global:", value=datetime.now().strftime("%d %B %Y"))
@@ -911,7 +928,8 @@ try:
                     if sh_invoice and len(data_untuk_massal) > 0:
                         sh_invoice.append_rows(data_untuk_massal)
                         st.success("✅ Seluruh data klien berhasil dibukukan secara berurutan ke Google Sheets!")
-                        # Tunggu sebentar lalu refresh agar nomor invoice maju ke angka baru
+                        # Mengupdate memory nomor agar tidak perlu tanya Google API lagi
+                        st.session_state.invoice_base_count += len(data_untuk_massal)
                         time.sleep(2)
                         st.rerun()
                     else:
@@ -927,9 +945,11 @@ try:
                     if sh_invoice:
                         sh_invoice.clear()
                         sh_invoice.append_row(["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"])
+                        # Mengembalikan nomor ke 1 di memory
+                        st.session_state.invoice_base_count = 1 
                         st.success("Database berhasil di-reset menjadi kosong!"); time.sleep(1.5); st.rerun()
 
-    # --- AUTO SAVE INPUTS ---
+    # --- AUTO SAVE INPUTS LOKAL ---
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
         with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
