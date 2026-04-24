@@ -711,12 +711,23 @@ try:
                 st.metric("Dana Tunai (Modal Kerja) yang Harus Disiapkan", f"Rp {kebutuhan_modal_kerja:,.0f}")
 
     # =====================================================================
-    # HALAMAN 6: PEMBUATAN INVOICE B2B
+    # HALAMAN 6: PEMBUATAN INVOICE B2B (HALAMAN KHUSUS)
     # =====================================================================
     elif menu_halaman == "🧾 Pembuatan Invoice B2B (Google Sheets)":
         st.subheader("🧾 Sistem Pembuatan Invoice B2B (Terhubung Google Sheets)")
         
         st.markdown("### 1️⃣ Kalkulasi Pembagian Harga Trip (Pro-rata Logistik)")
+        
+        # --- FUNGSI PENDETEKSI ALAMAT OTOMATIS BERDASARKAN NAMA ---
+        def get_auto_address(nama_klien):
+            n = str(nama_klien).lower()
+            if "budimas" in n or "bess" in n:
+                return "JALAN SEJAHTERA N0.4 RT03/RW05, SAMBAS KALIMANTAN BARAT 79453"
+            elif "evary" in n:
+                return "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN"
+            elif "mardius" in n or "msau" in n:
+                return "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411"
+            return "" # Jika tidak ada yang cocok, kembalikan kosong agar bisa diketik manual
         
         # --- LOGIKA SINKRONISASI ---
         def sync_all():
@@ -747,13 +758,13 @@ try:
         st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {armada_inv}:**")
         col_klien1, col_klien2, col_klien3 = st.columns(3)
         with col_klien1:
-            klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "cv bess"), key="klien_1")
+            klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "CV Budimas Eka Sentratama Sejahtera"), key="klien_1")
             vol_1 = st.number_input("Volume Muatan 1 (cm³):", min_value=0.0, value=float(get_val('top_vol_1', 3000000.0)), step=100.0, format="%.0f", key="top_vol_1", on_change=sync_all)
         with col_klien2:
-            klien_2 = st.text_input("Nama Klien 2:", value=get_val('klien_2', "evary"), key="klien_2")
+            klien_2 = st.text_input("Nama Klien 2:", value=get_val('klien_2', "PT Evary Harmoni Sejahtera"), key="klien_2")
             vol_2 = st.number_input("Volume Muatan 2 (cm³):", min_value=0.0, value=float(get_val('top_vol_2', 4000000.0)), step=100.0, format="%.0f", key="top_vol_2", on_change=sync_all)
         with col_klien3:
-            klien_3 = st.text_input("Nama Klien 3:", value=get_val('klien_3', "msau"), key="klien_3")
+            klien_3 = st.text_input("Nama Klien 3:", value=get_val('klien_3', "PT Mardius Sari Agro Utama"), key="klien_3")
             vol_3 = st.number_input("Volume Muatan 3 (cm³):", min_value=0.0, value=float(get_val('top_vol_3', 2500000.0)), step=100.0, format="%.0f", key="top_vol_3", on_change=sync_all)
         
         st.markdown("---")
@@ -777,14 +788,6 @@ try:
             urut_3 = urut_2 + (1 if vol_2 > 0 else 0)
             no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
-            # --- KAMUS ALAMAT OTOMATIS ---
-            dict_alamat = {
-                "PT MSAU": "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411",
-                "PT EVARY": "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN",
-                "CV BESS": "JALAN SEJAHTERA N0.4 RT03/RW05, SAMBAS KALIMANTAN BARAT 79453"
-            }
-            opsi_dropdown = ["Pilih Template...", "PT MSAU", "PT EVARY", "CV BESS", "Ketik Manual (Lainnya)"]
-
             tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 {klien_1}", f"📄 {klien_2}", f"📄 {klien_3}"])
             data_untuk_massal = []
             
@@ -793,14 +796,17 @@ try:
                 if vol_1 > 0:
                     st.text_input(f"No. Invoice {klien_1} (Terkunci Otomatis):", value=no_inv_1, disabled=True, key="inv_auto_1")
                     
-                    pil_al_1 = st.selectbox(f"Pilih Template Alamat {klien_1}:", opsi_dropdown, key="sel_al_1")
-                    if pil_al_1 in dict_alamat:
-                        alamat_1 = dict_alamat[pil_al_1]
-                        st.info(f"📍 {alamat_1}")
+                    # LOGIKA DETEKSI ALAMAT PINTAR
+                    auto_al_1 = get_auto_address(klien_1)
+                    if auto_al_1:
+                        alamat_1 = auto_al_1
+                        st.text_area(f"Alamat {klien_1} (Otomatis & Terkunci):", value=alamat_1, disabled=True, height=80, key="al_lock_1")
                     else:
                         alamat_1 = st.text_area(f"Alamat {klien_1}:", value=get_val('al1', "Ketik alamat manual di sini..."), height=80, key="al1")
+                        current_state['al1'] = alamat_1
 
                     ket_1 = st.text_input(f"Keterangan {klien_1}:", value=get_val('ket1', "Biaya Jasa"), key="ket1")
+                    current_state['ket1'] = ket_1
                     c1, c2 = st.columns(2)
                     with c1: hk_1 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg1', 0.0)), key="hkg1")
                     with c2: bk_1 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg1', 0.0)), key="bkg1")
@@ -824,14 +830,17 @@ try:
                 if vol_2 > 0:
                     st.text_input(f"No. Invoice {klien_2} (Terkunci Otomatis):", value=no_inv_2, disabled=True, key="inv_auto_2")
                     
-                    pil_al_2 = st.selectbox(f"Pilih Template Alamat {klien_2}:", opsi_dropdown, key="sel_al_2")
-                    if pil_al_2 in dict_alamat:
-                        alamat_2 = dict_alamat[pil_al_2]
-                        st.info(f"📍 {alamat_2}")
+                    # LOGIKA DETEKSI ALAMAT PINTAR
+                    auto_al_2 = get_auto_address(klien_2)
+                    if auto_al_2:
+                        alamat_2 = auto_al_2
+                        st.text_area(f"Alamat {klien_2} (Otomatis & Terkunci):", value=alamat_2, disabled=True, height=80, key="al_lock_2")
                     else:
                         alamat_2 = st.text_area(f"Alamat {klien_2}:", value=get_val('al2', "Ketik alamat manual di sini..."), height=80, key="al2")
+                        current_state['al2'] = alamat_2
 
                     ket_2 = st.text_input(f"Keterangan {klien_2}:", value=get_val('ket2', "Biaya Jasa"), key="ket2")
+                    current_state['ket2'] = ket_2
                     c1, c2 = st.columns(2)
                     with c1: hk_2 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg2', 0.0)), key="hkg2")
                     with c2: bk_2 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg2', 0.0)), key="bkg2")
@@ -855,14 +864,17 @@ try:
                 if vol_3 > 0:
                     st.text_input(f"No. Invoice {klien_3} (Terkunci Otomatis):", value=no_inv_3, disabled=True, key="inv_auto_3")
                     
-                    pil_al_3 = st.selectbox(f"Pilih Template Alamat {klien_3}:", opsi_dropdown, key="sel_al_3")
-                    if pil_al_3 in dict_alamat:
-                        alamat_3 = dict_alamat[pil_al_3]
-                        st.info(f"📍 {alamat_3}")
+                    # LOGIKA DETEKSI ALAMAT PINTAR
+                    auto_al_3 = get_auto_address(klien_3)
+                    if auto_al_3:
+                        alamat_3 = auto_al_3
+                        st.text_area(f"Alamat {klien_3} (Otomatis & Terkunci):", value=alamat_3, disabled=True, height=80, key="al_lock_3")
                     else:
                         alamat_3 = st.text_area(f"Alamat {klien_3}:", value=get_val('al3', "Ketik alamat manual di sini..."), height=80, key="al3")
+                        current_state['al3'] = alamat_3
 
                     ket_3 = st.text_input(f"Keterangan {klien_3}:", value=get_val('ket3', "Biaya Jasa"), key="ket3")
+                    current_state['ket3'] = ket_3
                     c1, c2 = st.columns(2)
                     with c1: hk_3 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg3', 0.0)), key="hkg3")
                     with c2: bk_3 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg3', 0.0)), key="bkg3")
@@ -911,7 +923,7 @@ try:
                         st.session_state.invoice_base_count = 1 
                         st.success("Database berhasil di-reset menjadi kosong!"); time.sleep(1.5); st.rerun()
 
-    # --- AUTO SAVE LOKAL CLOUD (TANPA API GOOGLE) ---
+    # --- AUTO SAVE LOKAL (TANPA API GOOGLE) ---
     # Ini yang menyelamatkan datamu dari Refresh!
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
