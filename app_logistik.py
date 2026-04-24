@@ -35,8 +35,9 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d = ImageDraw.Draw(img)
     
     try:
-        f_title = ImageFont.truetype("arialbd.ttf", 16)
-        f_bold = ImageFont.truetype("arialbd.ttf", 13)
+        # Mengubah SEMUA font menjadi reguler (arial.ttf) tanpa cetak tebal (arialbd.ttf)
+        f_title = ImageFont.truetype("arial.ttf", 16)
+        f_bold = ImageFont.truetype("arial.ttf", 13) 
         f_text = ImageFont.truetype("arial.ttf", 13)
     except:
         f_title = f_bold = f_text = ImageFont.load_default()
@@ -115,15 +116,21 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.text((x_col3 + 10, y_sub + 45), "Rp", fill="black", font=f_bold)
     d.text((970 - 90, y_sub + 45), f"{total_akhir:,.0f}", fill="black", font=f_bold)
 
-    # 6. TERBILANG & TTD
+    # 6. TERBILANG & TTD (Diperbaiki agar Rata Tengah Presisi)
     y_terbilang = 420
     d.text((30, y_terbilang), "Terbilang :", fill="black", font=f_text)
     d.rectangle([30, y_terbilang + 20, 650, y_terbilang + 60], outline="black", width=2)
     d.text((40, y_terbilang + 30), format_terbilang(total_akhir), fill="black", font=f_bold)
 
-    d.text((800, y_terbilang + 50), "Hormat Kami,", fill="black", font=f_text)
-    d.text((790, y_terbilang + 140), "ANTONIUS", fill="black", font=f_bold)
-    d.text((790, y_terbilang + 155), "Direktur", fill="black", font=f_text)
+    # --- PERHITUNGAN MATEMATIKA UNTUK RATA TENGAH ---
+    center_x_ttd = 835 # Titik tengah area tanda tangan (antara x=700 dan x=970)
+    w_hormat = d.textbbox((0,0), "Hormat Kami,", font=f_text)[2]
+    w_nama = d.textbbox((0,0), "ANTONIUS", font=f_bold)[2]
+    w_jabatan = d.textbbox((0,0), "Direktur", font=f_text)[2]
+
+    d.text((center_x_ttd - w_hormat/2, y_terbilang + 50), "Hormat Kami,", fill="black", font=f_text)
+    d.text((center_x_ttd - w_nama/2, y_terbilang + 140), "ANTONIUS", fill="black", font=f_bold)
+    d.text((center_x_ttd - w_jabatan/2, y_terbilang + 155), "Direktur", fill="black", font=f_text)
 
     # 7. INFO BANK
     y_bank = 600
@@ -369,18 +376,18 @@ try:
         col1, col2 = st.columns(2)
         with col1:
             st.info("💡 Input Data Keuangan")
-            biaya_tetap = st.number_input("Total Biaya Tetap (Rp):", min_value=0.0, value=float(get_val('biaya_tetap_bep', def_tetap)), step=100000.0)
+            biaya_tetap = st.number_input("Total Biaya Tetap (Rp):", min_value=0.0, value=float(get_val('biaya_tetap_bep', def_tetap)), step=100000.0, format="%.0f")
             current_state['biaya_tetap_bep'] = biaya_tetap
-            biaya_variabel = st.number_input("Total Cost per Trip (Rp):", min_value=0.0, value=float(get_val('biaya_var_bep', def_var)), step=10000.0)
+            biaya_variabel = st.number_input("Total Cost per Trip (Rp):", min_value=0.0, value=float(get_val('biaya_var_bep', def_var)), step=10000.0, format="%.0f")
             current_state['biaya_var_bep'] = biaya_variabel
-            harga_jual = st.number_input("Harga/Pendapatan per Trip (Rp):", min_value=0.0, value=float(get_val('harga_jual_bep', def_harga)), step=50000.0)
+            harga_jual = st.number_input("Harga/Pendapatan per Trip (Rp):", min_value=0.0, value=float(get_val('harga_jual_bep', def_harga)), step=50000.0, format="%.0f")
             current_state['harga_jual_bep'] = harga_jual
         with col2:
             st.success("📈 Hasil Analisis BEP")
             if harga_jual > biaya_variabel:
                 margin = harga_jual - biaya_variabel
                 bep_trip = biaya_tetap / margin
-                st.metric(label="Titik Impas (BEP) - Trip", value=f"{bep_trip:.1f} Trip")
+                st.metric(label="Titik Impas (BEP) - Trip", value=f"{bep_trip:,.1f} Trip")
             else:
                 st.error("⚠️ Harga per trip harus lebih besar dari biaya (Total Cost) per trip!")
 
@@ -392,9 +399,9 @@ try:
         col_t1, col_t2 = st.columns([1, 2])
         with col_t1:
             st.info("💰 1. Tentukan Target Keuntungan")
-            target_laba = st.number_input("Target Laba Bulanan (Rp):", min_value=0.0, value=float(get_val('target_laba', 10000000.0)), step=1000000.0)
+            target_laba = st.number_input("Target Laba Bulanan (Rp):", min_value=0.0, value=float(get_val('target_laba', 10000000.0)), step=1000000.0, format="%.0f")
             current_state['target_laba'] = target_laba
-            biaya_tetap_global = st.number_input("Total Biaya Tetap Operasional (Rp):", value=float(get_val('biaya_tetap_global', estimasi_total_fixed)), step=1000000.0)
+            biaya_tetap_global = st.number_input("Total Biaya Tetap Operasional (Rp):", value=float(get_val('biaya_tetap_global', estimasi_total_fixed)), step=1000000.0, format="%.0f")
             current_state['biaya_tetap_global'] = biaya_tetap_global
         with col_t2:
             st.success("📊 2. Referensi Kebutuhan Trip per Rute")
@@ -447,7 +454,7 @@ try:
                         rute_dipilih = st.selectbox("Tentukan Rute:", rute_terfilter_mobil_ini, index=rute_terfilter_mobil_ini.index(def_rute) if def_rute in rute_terfilter_mobil_ini else 0, key=f"rute_{hari}_{mobil}")
                         current_state[f'rute_{hari}_{mobil}'] = rute_dipilih
                         
-                        jml_trip = st.number_input("Jml Trip:", min_value=1, value=int(get_val(f'trip_{hari}_{mobil}', 1)), step=1, key=f"trip_in_{hari}_{mobil}")
+                        jml_trip = st.number_input("Jml Trip:", min_value=1, value=int(get_val(f'trip_{hari}_{mobil}', 1)), step=1, key=f"trip_in_{hari}_{mobil}", format="%d")
                         current_state[f'trip_{hari}_{mobil}'] = jml_trip
                         
                         ada_muatan_balik = st.checkbox("📦 Ada Muatan Balik?", value=bool(get_val(f'backhaul_{hari}_{mobil}', False)), key=f"backhaul_in_{hari}_{mobil}")
@@ -455,7 +462,7 @@ try:
                         
                         pendapatan_ekstra_bersih = 0.0
                         if ada_muatan_balik:
-                            pendapatan_ekstra_kotor = st.number_input("Harga Borongan Muatan Balik (Rp):", min_value=0.0, value=float(get_val(f'uang_balik_{hari}_{mobil}', 500000.0)), step=100000.0, key=f"uang_balik_in_{hari}_{mobil}")
+                            pendapatan_ekstra_kotor = st.number_input("Harga Borongan Muatan Balik (Rp):", min_value=0.0, value=float(get_val(f'uang_balik_{hari}_{mobil}', 500000.0)), step=100000.0, key=f"uang_balik_in_{hari}_{mobil}", format="%.0f")
                             current_state[f'uang_balik_{hari}_{mobil}'] = pendapatan_ekstra_kotor
                             pendapatan_ekstra_bersih = pendapatan_ekstra_kotor * 0.55
                             st.caption(f"*Laba Bersih yang masuk: **Rp {pendapatan_ekstra_bersih:,.0f}** (55% dari borongan).*")
@@ -558,7 +565,7 @@ try:
             
             st.markdown("### 📊 Fleet Utilization")
             hari_kerja_sebulan = 26
-            trip_aktual = st.number_input("Total Trip armada ini bulan lalu:", min_value=0, value=int(get_val('trip_aktual', 20)), step=1)
+            trip_aktual = st.number_input("Total Trip armada ini bulan lalu:", min_value=0, value=int(get_val('trip_aktual', 20)), step=1, format="%d")
             current_state['trip_aktual'] = trip_aktual
 
             utilitas = (trip_aktual / hari_kerja_sebulan) * 100
@@ -633,7 +640,7 @@ try:
             elif 'tronton' in tm_lower: kategori_rute, default_tonase = 'tronton', 15.0
             else: kategori_rute, default_tonase = 'truk standar', 5.0
             
-            kapasitas_ton = st.number_input(f"Kapasitas Maksimal (Ton):", min_value=0.5, value=float(get_val('kapasitas_ton', default_tonase)), step=0.5)
+            kapasitas_ton = st.number_input(f"Kapasitas Maksimal (Ton):", min_value=0.5, value=float(get_val('kapasitas_ton', default_tonase)), step=0.5, format="%.1f")
             current_state['kapasitas_ton'] = kapasitas_ton
 
         with col_ton2:
@@ -646,7 +653,7 @@ try:
 
             cost_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Cost_Bersih'].values[0] if rute_ton else 0
             harga_rute_ton = df_rute_unik[df_rute_unik['Label_Rute'] == rute_ton]['Harga_Bersih'].values[0] if rute_ton else 0
-            jarak_km = st.number_input("Jarak Tempuh Rute (Kilometer):", min_value=1.0, value=float(get_val('jarak_km', 150.0)), step=10.0)
+            jarak_km = st.number_input("Jarak Tempuh Rute (Kilometer):", min_value=1.0, value=float(get_val('jarak_km', 150.0)), step=10.0, format="%.1f")
             current_state['jarak_km'] = jarak_km
 
         st.markdown("---")
@@ -678,12 +685,12 @@ try:
             st.markdown("### 🛞 Manajemen Keausan Ban & Suku Cadang")
             col_ban1, col_ban2 = st.columns(2)
             with col_ban1:
-                harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=float(get_val('harga_set_ban', 15000000.0)), step=500000.0)
+                harga_set_ban = st.number_input("Harga 1 Set Ban (Rp):", min_value=1000000.0, value=float(get_val('harga_set_ban', 15000000.0)), step=500000.0, format="%.0f")
                 current_state['harga_set_ban'] = harga_set_ban
-                umur_ban_km = st.number_input("Estimasi Umur Ban (Kilometer):", min_value=1000.0, value=float(get_val('umur_ban_km', 60000.0)), step=5000.0)
+                umur_ban_km = st.number_input("Estimasi Umur Ban (Kilometer):", min_value=1000.0, value=float(get_val('umur_ban_km', 60000.0)), step=5000.0, format="%.0f")
                 current_state['umur_ban_km'] = umur_ban_km
             with col_ban2:
-                jarak_rute_trip = st.number_input("Jarak Tempuh Rute yang Sering Dilalui (KM per Trip PP):", min_value=10.0, value=float(get_val('jarak_rute_trip', 300.0)), step=10.0)
+                jarak_rute_trip = st.number_input("Jarak Tempuh Rute yang Sering Dilalui (KM per Trip PP):", min_value=10.0, value=float(get_val('jarak_rute_trip', 300.0)), step=10.0, format="%.0f")
                 current_state['jarak_rute_trip'] = jarak_rute_trip
 
             if umur_ban_km > 0:
@@ -697,7 +704,7 @@ try:
             st.markdown("### 💸 Simulator Kebutuhan Modal Kerja (*Working Capital*)")
             col_cash1, col_cash2 = st.columns(2)
             with col_cash1:
-                proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=float(get_val('proyeksi_biaya_bulanan', 250000000.0)), step=10000000.0)
+                proyeksi_biaya_bulanan = st.number_input("Estimasi Total Biaya Operasional Sebulan (Rp):", min_value=1000000.0, value=float(get_val('proyeksi_biaya_bulanan', 250000000.0)), step=10000000.0, format="%.0f")
                 current_state['proyeksi_biaya_bulanan'] = proyeksi_biaya_bulanan
                 top_options = ["0 Hari (Cash / Tunai Keras)", "14 Hari", "30 Hari (1 Bulan)", "60 Hari (2 Bulan)", "90 Hari (3 Bulan)"]
                 def_top = get_val('top_klien', top_options[2])
@@ -748,7 +755,7 @@ try:
         with col_inv2:
             nama_supir_inv = st.text_input("Nama Supir (Bertugas):", value=get_val('nama_supir_inv', "Budi Santoso"), key="nama_supir_inv")
         with col_inv3:
-            harga_target_trip = st.number_input("Target Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('top_harga_trip', 3000000.0)), step=100000.0, key="top_harga_trip", on_change=sync_all)
+            harga_target_trip = st.number_input("Target Harga 1 Trip (Rp):", min_value=100000.0, value=float(get_val('top_harga_trip', 3000000.0)), step=100000.0, key="top_harga_trip", on_change=sync_all, format="%.0f")
         with col_inv4:
             kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=float(get_val('kapasitas_truk_inv', 12000000.0)), step=500000.0, format="%.0f", key="kapasitas_truk_inv")
 
@@ -822,8 +829,8 @@ try:
                     bk_1 = float(get_val('top_vol_1', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci) 1:", step=1.0, value=hk_1, disabled=True)
-                    with c2: st.number_input(f"Total Volume (Terkunci) 1:", step=1.0, value=bk_1, disabled=True)
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 1:", step=1.0, value=hk_1, disabled=True, format="%.2f")
+                    with c2: st.number_input(f"Total Volume (Terkunci) 1:", step=1.0, value=bk_1, disabled=True, format="%.0f")
                     
                     sub_1 = hk_1 * bk_1
                     ppn_1 = sub_1 * 0.11
@@ -859,8 +866,8 @@ try:
                     bk_2 = float(get_val('top_vol_2', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci) 2:", step=1.0, value=hk_2, disabled=True)
-                    with c2: st.number_input(f"Total Volume (Terkunci) 2:", step=1.0, value=bk_2, disabled=True)
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 2:", step=1.0, value=hk_2, disabled=True, format="%.2f")
+                    with c2: st.number_input(f"Total Volume (Terkunci) 2:", step=1.0, value=bk_2, disabled=True, format="%.0f")
                     
                     sub_2 = hk_2 * bk_2
                     ppn_2 = sub_2 * 0.11
@@ -896,8 +903,8 @@ try:
                     bk_3 = float(get_val('top_vol_3', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci) 3:", step=1.0, value=hk_3, disabled=True)
-                    with c2: st.number_input(f"Total Volume (Terkunci) 3:", step=1.0, value=bk_3, disabled=True)
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 3:", step=1.0, value=hk_3, disabled=True, format="%.2f")
+                    with c2: st.number_input(f"Total Volume (Terkunci) 3:", step=1.0, value=bk_3, disabled=True, format="%.0f")
                     
                     sub_3 = hk_3 * bk_3
                     ppn_3 = sub_3 * 0.11
@@ -937,7 +944,7 @@ try:
                         st.session_state.invoice_base_count = 1 
                         st.success("Database di-reset!"); time.sleep(1.5); st.rerun()
 
-    # --- AUTO SAVE INPUTS LOKAL SERVER ---
+    # --- AUTO SAVE LOKAL ---
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
         with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
