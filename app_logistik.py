@@ -189,7 +189,6 @@ else:
     st.sidebar.error(f"❌ Gagal koneksi API: {st.session_state.get('gsheets_error')}")
 
 # --- DATABASE LOKAL AUTO-SAVE ---
-# Menyimpan inputan ke dalam memori lokal server agar tahan terhadap refresh (F5)
 NAMA_FILE_DB = "database_invoice_formal.csv"
 NAMA_FILE_JADWAL = "database_jadwal.csv"
 STATE_FILE_INPUTS = "auto_save_inputs.json"
@@ -294,7 +293,7 @@ try:
     df_rute_unik = data_rute.drop_duplicates(subset=['Label_Rute']).copy()
     daftar_semua_rute = sorted(df_rute_unik['Label_Rute'].dropna().tolist())
 
-    # --- BAGIAN 3: NAVIGASI BARU (PEMISAHAN HALAMAN) ---
+    # --- BAGIAN 3: NAVIGASI BARU ---
     st.sidebar.title("🧭 Menu Navigasi")
     opsi_menu = [
         "📊 Kalkulator BEP (Utama)", 
@@ -788,6 +787,14 @@ try:
             urut_3 = urut_2 + (1 if vol_2 > 0 else 0)
             no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
+            # --- KAMUS ALAMAT OTOMATIS ---
+            dict_alamat = {
+                "PT MSAU": "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411",
+                "PT EVARY": "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN",
+                "CV BESS": "JALAN SEJAHTERA N0.4 RT03/RW05, SAMBAS KALIMANTAN BARAT 79453"
+            }
+            opsi_dropdown = ["Pilih Template...", "PT MSAU", "PT EVARY", "CV BESS", "Ketik Manual (Lainnya)"]
+
             tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 {klien_1}", f"📄 {klien_2}", f"📄 {klien_3}"])
             data_untuk_massal = []
             
@@ -807,9 +814,14 @@ try:
 
                     ket_1 = st.text_input(f"Keterangan {klien_1}:", value=get_val('ket1', "Biaya Jasa"), key="ket1")
                     current_state['ket1'] = ket_1
+                    
+                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
+                    hk_1 = float(get_val('hkg1', 0.0))
+                    bk_1 = float(get_val('bkg1', 0.0))
+                    
                     c1, c2 = st.columns(2)
-                    with c1: hk_1 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg1', 0.0)), key="hkg1")
-                    with c2: bk_1 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg1', 0.0)), key="bkg1")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_1, disabled=True, key="hkg1_lock")
+                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_1, disabled=True, key="bkg1_lock")
                     
                     sub_1 = hk_1 * bk_1
                     ppn_1 = sub_1 * 0.11
@@ -841,9 +853,14 @@ try:
 
                     ket_2 = st.text_input(f"Keterangan {klien_2}:", value=get_val('ket2', "Biaya Jasa"), key="ket2")
                     current_state['ket2'] = ket_2
+                    
+                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
+                    hk_2 = float(get_val('hkg2', 0.0))
+                    bk_2 = float(get_val('bkg2', 0.0))
+                    
                     c1, c2 = st.columns(2)
-                    with c1: hk_2 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg2', 0.0)), key="hkg2")
-                    with c2: bk_2 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg2', 0.0)), key="bkg2")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_2, disabled=True, key="hkg2_lock")
+                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_2, disabled=True, key="bkg2_lock")
                     
                     sub_2 = hk_2 * bk_2
                     ppn_2 = sub_2 * 0.11
@@ -875,9 +892,14 @@ try:
 
                     ket_3 = st.text_input(f"Keterangan {klien_3}:", value=get_val('ket3', "Biaya Jasa"), key="ket3")
                     current_state['ket3'] = ket_3
+                    
+                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
+                    hk_3 = float(get_val('hkg3', 0.0))
+                    bk_3 = float(get_val('bkg3', 0.0))
+                    
                     c1, c2 = st.columns(2)
-                    with c1: hk_3 = st.number_input(f"Harga / Volume:", step=1.0, value=float(get_val('hkg3', 0.0)), key="hkg3")
-                    with c2: bk_3 = st.number_input(f"Total Volume:", step=1.0, value=float(get_val('bkg3', 0.0)), key="bkg3")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_3, disabled=True, key="hkg3_lock")
+                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_3, disabled=True, key="bkg3_lock")
                     
                     sub_3 = hk_3 * bk_3
                     ppn_3 = sub_3 * 0.11
