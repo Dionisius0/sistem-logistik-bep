@@ -752,7 +752,7 @@ try:
         with col_inv4:
             kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=float(get_val('kapasitas_truk_inv', 12000000.0)), step=500000.0, format="%.0f", key="kapasitas_truk_inv")
 
-        st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat:**")
+        st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {info_kendaraan_inv}:**")
         col_klien1, col_klien2, col_klien3 = st.columns(3)
         with col_klien1:
             klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "CV BESS PEMANGKAT"), key="klien_1")
@@ -792,13 +792,6 @@ try:
             urut_3 = urut_2 + (1 if vol_2 > 0 else 0)
             no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
-            dict_alamat = {
-                "PT MSAU": "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411",
-                "PT EVARY": "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN",
-                "CV BESS": "JALAN SEJAHTERA N0.4 RT03/RW05, SAMBAS KALIMANTAN BARAT 79453"
-            }
-            opsi_dropdown = ["Pilih Template...", "PT MSAU", "PT EVARY", "CV BESS", "Ketik Manual (Lainnya)"]
-
             tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 {klien_1}", f"📄 {klien_2}", f"📄 {klien_3}"])
             data_untuk_massal = []
             
@@ -831,10 +824,14 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_1, klien_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1])
 
-                    st.success(f"**💰 Rincian Biaya {klien_1}: TOTAL AKHIR = Rp {tot_1:,.0f}**")
+                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
+                    st.success(f"**💰 Rincian Biaya {klien_1}:**\n\n"
+                            f"• Harga/Volume x Total Volume = **Rp {sub_1:,.0f}**\n\n"
+                            f"• PPN (11%) = **Rp {ppn_1:,.0f}**\n\n"
+                            f"• **TOTAL AKHIR = Rp {tot_1:,.0f}**")
                     
                     img_1 = buat_invoice_formal(no_inv_1, tgl_invoice, klien_1, alamat_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1, info_kendaraan_inv, nama_supir_inv)
-                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_1}", data=img_1, file_name=f"{no_inv_1}.png", mime="image/png", key="dl_1")
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_1}", data=img_1, file_name=f"{no_inv_1.replace('/','-')}.png", mime="image/png", key="dl_1")
 
             # --- KLIEN 2 ---
             with tab_inv2:
@@ -865,10 +862,14 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_2, klien_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2])
 
-                    st.success(f"**💰 Rincian Biaya {klien_2}: TOTAL AKHIR = Rp {tot_2:,.0f}**")
+                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
+                    st.success(f"**💰 Rincian Biaya {klien_2}:**\n\n"
+                            f"• Harga/Volume x Total Volume = **Rp {sub_2:,.0f}**\n\n"
+                            f"• PPN (11%) = **Rp {ppn_2:,.0f}**\n\n"
+                            f"• **TOTAL AKHIR = Rp {tot_2:,.0f}**")
                     
                     img_2 = buat_invoice_formal(no_inv_2, tgl_invoice, klien_2, alamat_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2, info_kendaraan_inv, nama_supir_inv)
-                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_2}", data=img_2, file_name=f"{no_inv_2}.png", mime="image/png", key="dl_2")
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_2}", data=img_2, file_name=f"{no_inv_2.replace('/','-')}.png", mime="image/png", key="dl_2")
 
             # --- KLIEN 3 ---
             with tab_inv3:
@@ -899,10 +900,14 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_3, klien_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3])
 
-                    st.success(f"**💰 Rincian Biaya {klien_3}: TOTAL AKHIR = Rp {tot_3:,.0f}**")
+                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
+                    st.success(f"**💰 Rincian Biaya {klien_3}:**\n\n"
+                            f"• Harga/Volume x Total Volume = **Rp {sub_3:,.0f}**\n\n"
+                            f"• PPN (11%) = **Rp {ppn_3:,.0f}**\n\n"
+                            f"• **TOTAL AKHIR = Rp {tot_3:,.0f}**")
                     
                     img_3 = buat_invoice_formal(no_inv_3, tgl_invoice, klien_3, alamat_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3, info_kendaraan_inv, nama_supir_inv)
-                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_3}", data=img_3, file_name=f"{no_inv_3}.png", mime="image/png", key="dl_3")
+                    st.download_button(label=f"🖨️ UNDUH GAMBAR INVOICE {klien_3}", data=img_3, file_name=f"{no_inv_3.replace('/','-')}.png", mime="image/png", key="dl_3")
 
             st.markdown("---")
             if st.button("📥 SIMPAN SEMUA DATA KLIEN KE GOOGLE SHEETS", use_container_width=True, type="primary"):
@@ -928,7 +933,7 @@ try:
                         st.session_state.invoice_base_count = 1 
                         st.success("Database di-reset!"); time.sleep(1.5); st.rerun()
 
-    # --- AUTO SAVE INPUTS LOKAL SERVER ---
+    # --- AUTO SAVE LOKAL ---
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
         with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
