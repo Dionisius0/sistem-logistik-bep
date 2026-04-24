@@ -189,6 +189,7 @@ else:
     st.sidebar.error(f"❌ Gagal koneksi API: {st.session_state.get('gsheets_error')}")
 
 # --- DATABASE LOKAL AUTO-SAVE ---
+# Menyimpan inputan ke dalam memori lokal server agar tahan terhadap refresh (F5)
 NAMA_FILE_DB = "database_invoice_formal.csv"
 NAMA_FILE_JADWAL = "database_jadwal.csv"
 STATE_FILE_INPUTS = "auto_save_inputs.json"
@@ -293,7 +294,7 @@ try:
     df_rute_unik = data_rute.drop_duplicates(subset=['Label_Rute']).copy()
     daftar_semua_rute = sorted(df_rute_unik['Label_Rute'].dropna().tolist())
 
-    # --- BAGIAN 3: NAVIGASI BARU ---
+    # --- BAGIAN 3: NAVIGASI BARU (PEMISAHAN HALAMAN) ---
     st.sidebar.title("🧭 Menu Navigasi")
     opsi_menu = [
         "📊 Kalkulator BEP (Utama)", 
@@ -726,7 +727,7 @@ try:
                 return "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN"
             elif "mardius" in n or "msau" in n:
                 return "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411"
-            return "" # Jika tidak ada yang cocok, kembalikan kosong agar bisa diketik manual
+            return "" 
         
         # --- LOGIKA SINKRONISASI ---
         def sync_all():
@@ -740,7 +741,7 @@ try:
             tot = v1 + v2 + v3
             if tot > 0:
                 tarif = harga_trip / tot
-                st.session_state.hkg1, st.session_state.hkg2, st.session_state.hkg3 = tarif, tarif, tarif
+                st.session_state.hkg1 = st.session_state.hkg2 = st.session_state.hkg3 = tarif
             else:
                 st.session_state.hkg1 = st.session_state.hkg2 = st.session_state.hkg3 = 0.0
 
@@ -766,18 +767,29 @@ try:
             klien_3 = st.text_input("Nama Klien 3:", value=get_val('klien_3', "PT Mardius Sari Agro Utama"), key="klien_3")
             vol_3 = st.number_input("Volume Muatan 3 (cm³):", min_value=0.0, value=float(get_val('top_vol_3', 2500000.0)), step=100.0, format="%.0f", key="top_vol_3", on_change=sync_all)
         
+        # --- INISIALISASI VARIABEL SINKRONISASI JIKA BELUM ADA ---
+        if 'hkg1' not in st.session_state:
+            _v1 = float(get_val('top_vol_1', 3000000.0))
+            _v2 = float(get_val('top_vol_2', 4000000.0))
+            _v3 = float(get_val('top_vol_3', 2500000.0))
+            _ht = float(get_val('top_harga_trip', 3000000.0))
+            _tot = _v1 + _v2 + _v3
+            _tarif = _ht / _tot if _tot > 0 else 0.0
+            st.session_state.hkg1 = st.session_state.hkg2 = st.session_state.hkg3 = _tarif
+            st.session_state.bkg1 = _v1
+            st.session_state.bkg2 = _v2
+            st.session_state.bkg3 = _v3
+
         st.markdown("---")
         if (vol_1 + vol_2 + vol_3) > 0:
             st.markdown("### 2️⃣ Formulir & Rincian Invoice per Klien")
 
-            # Mengambil data hitungan dari memori agar Google tidak dilimit 429
             base_urut = st.session_state.get("invoice_base_count", 1)
 
             col_inv_tgl, col_inv_pref = st.columns([2, 1])
             with col_inv_tgl: tgl_invoice = st.text_input("Tanggal Invoice Global:", value=datetime.now().strftime("%d %B %Y"))
             with col_inv_pref: prefix_inv = st.text_input("Kode Prefix:", value=f"INV{datetime.now().strftime('%y')}-")
 
-            # Menentukan angka urut secara mutlak (tidak akan loncat)
             urut_1 = base_urut
             no_inv_1 = f"{prefix_inv}{int(urut_1):03d}"
             
@@ -787,7 +799,6 @@ try:
             urut_3 = urut_2 + (1 if vol_2 > 0 else 0)
             no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
-            # --- KAMUS ALAMAT OTOMATIS ---
             dict_alamat = {
                 "PT MSAU": "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411",
                 "PT EVARY": "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN",
@@ -803,7 +814,6 @@ try:
                 if vol_1 > 0:
                     st.text_input(f"No. Invoice {klien_1} (Terkunci Otomatis):", value=no_inv_1, disabled=True, key="inv_auto_1")
                     
-                    # LOGIKA DETEKSI ALAMAT PINTAR
                     auto_al_1 = get_auto_address(klien_1)
                     if auto_al_1:
                         alamat_1 = auto_al_1
@@ -815,13 +825,13 @@ try:
                     ket_1 = st.text_input(f"Keterangan {klien_1}:", value=get_val('ket1', "Biaya Jasa"), key="ket1")
                     current_state['ket1'] = ket_1
                     
-                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
+                    # SINGLE SOURCE OF TRUTH (CABUT LABEL KEY AGAR INSTAN)
                     hk_1 = float(get_val('hkg1', 0.0))
                     bk_1 = float(get_val('bkg1', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_1, disabled=True, key="hkg1_lock")
-                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_1, disabled=True, key="bkg1_lock")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 1:", step=1.0, value=hk_1, disabled=True)
+                    with c2: st.number_input(f"Total Volume (Terkunci) 1:", step=1.0, value=bk_1, disabled=True)
                     
                     sub_1 = hk_1 * bk_1
                     ppn_1 = sub_1 * 0.11
@@ -842,7 +852,6 @@ try:
                 if vol_2 > 0:
                     st.text_input(f"No. Invoice {klien_2} (Terkunci Otomatis):", value=no_inv_2, disabled=True, key="inv_auto_2")
                     
-                    # LOGIKA DETEKSI ALAMAT PINTAR
                     auto_al_2 = get_auto_address(klien_2)
                     if auto_al_2:
                         alamat_2 = auto_al_2
@@ -854,13 +863,12 @@ try:
                     ket_2 = st.text_input(f"Keterangan {klien_2}:", value=get_val('ket2', "Biaya Jasa"), key="ket2")
                     current_state['ket2'] = ket_2
                     
-                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
                     hk_2 = float(get_val('hkg2', 0.0))
                     bk_2 = float(get_val('bkg2', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_2, disabled=True, key="hkg2_lock")
-                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_2, disabled=True, key="bkg2_lock")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 2:", step=1.0, value=hk_2, disabled=True)
+                    with c2: st.number_input(f"Total Volume (Terkunci) 2:", step=1.0, value=bk_2, disabled=True)
                     
                     sub_2 = hk_2 * bk_2
                     ppn_2 = sub_2 * 0.11
@@ -881,7 +889,6 @@ try:
                 if vol_3 > 0:
                     st.text_input(f"No. Invoice {klien_3} (Terkunci Otomatis):", value=no_inv_3, disabled=True, key="inv_auto_3")
                     
-                    # LOGIKA DETEKSI ALAMAT PINTAR
                     auto_al_3 = get_auto_address(klien_3)
                     if auto_al_3:
                         alamat_3 = auto_al_3
@@ -893,13 +900,12 @@ try:
                     ket_3 = st.text_input(f"Keterangan {klien_3}:", value=get_val('ket3', "Biaya Jasa"), key="ket3")
                     current_state['ket3'] = ket_3
                     
-                    # AMBIL DATA DARI ATAS DAN KUNCI (SINGLE SOURCE OF TRUTH)
                     hk_3 = float(get_val('hkg3', 0.0))
                     bk_3 = float(get_val('bkg3', 0.0))
                     
                     c1, c2 = st.columns(2)
-                    with c1: st.number_input(f"Harga / Volume (Terkunci):", step=1.0, value=hk_3, disabled=True, key="hkg3_lock")
-                    with c2: st.number_input(f"Total Volume (Terkunci):", step=1.0, value=bk_3, disabled=True, key="bkg3_lock")
+                    with c1: st.number_input(f"Harga / Volume (Terkunci) 3:", step=1.0, value=hk_3, disabled=True)
+                    with c2: st.number_input(f"Total Volume (Terkunci) 3:", step=1.0, value=bk_3, disabled=True)
                     
                     sub_3 = hk_3 * bk_3
                     ppn_3 = sub_3 * 0.11
@@ -941,12 +947,10 @@ try:
                     if sh_invoice:
                         sh_invoice.clear()
                         sh_invoice.append_row(["Waktu_Input", "No_Invoice", "Nama_Klien", "Keterangan", "Harga_Volume", "Total_Volume", "Jumlah", "PPN", "Total_Akhir"])
-                        # Mengembalikan nomor ke 1 di memory
                         st.session_state.invoice_base_count = 1 
                         st.success("Database berhasil di-reset menjadi kosong!"); time.sleep(1.5); st.rerun()
 
     # --- AUTO SAVE LOKAL (TANPA API GOOGLE) ---
-    # Ini yang menyelamatkan datamu dari Refresh!
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
         with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
