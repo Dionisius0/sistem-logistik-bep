@@ -65,7 +65,7 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
     d.text((820, 60), tgl_invoice, fill="black", font=f_text)
     d.text((820, 75), no_invoice, fill="black", font=f_text)
 
-    # 3. KEPADA & INFORMASI PENGIRIMAN (DIKANAN, SEJAJAR)
+    # 3. KEPADA & INFORMASI PENGIRIMAN
     y_kepada = 120
     d.text((30, y_kepada), "Kepada", fill="black", font=f_bold)
     d.text((30, y_kepada + 15), nama_klien, fill="black", font=f_bold)
@@ -74,9 +74,9 @@ def buat_invoice_formal(no_invoice, tgl_invoice, nama_klien, alamat_klien, keter
         d.text((30, y_alamat), baris.strip(), fill="black", font=f_text)
         y_alamat += 15
 
-    # INFORMASI ARMADA & SUPIR
-    d.text((820, y_kepada), f"Plat Mobil : {plat_mobil}", fill="black", font=f_text)
-    d.text((820, y_kepada + 15), f"Supir         : {nama_supir}", fill="black", font=f_text)
+    # INFORMASI ARMADA & SUPIR (Bergeser ke x=655 agar rata dengan tulisan No. Invoice)
+    d.text((655, y_kepada), f"Plat Mobil : {plat_mobil}", fill="black", font=f_text)
+    d.text((655, y_kepada + 15), f"Supir         : {nama_supir}", fill="black", font=f_text)
 
     # 4. TABEL UTAMA
     y_tabel = 240
@@ -752,7 +752,7 @@ try:
         with col_inv4:
             kapasitas_truk_inv = st.number_input("Kapasitas Volume Truk (cm³):", min_value=1.0, value=float(get_val('kapasitas_truk_inv', 12000000.0)), step=500000.0, format="%.0f", key="kapasitas_truk_inv")
 
-        st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat di {info_kendaraan_inv}:**")
+        st.markdown(f"**📝 Masukkan Rincian Volume Klien yang dimuat:**")
         col_klien1, col_klien2, col_klien3 = st.columns(3)
         with col_klien1:
             klien_1 = st.text_input("Nama Klien 1:", value=get_val('klien_1', "CV BESS PEMANGKAT"), key="klien_1")
@@ -792,6 +792,13 @@ try:
             urut_3 = urut_2 + (1 if vol_2 > 0 else 0)
             no_inv_3 = f"{prefix_inv}{int(urut_3):03d}"
 
+            dict_alamat = {
+                "PT MSAU": "DSN RAMBI, SAING RAMBI, SAMBAS, KAB. SAMBAS, KALIMANTAN BARAT, 79411",
+                "PT EVARY": "JALAN PADANG PASIR 053, DUSUN PADANG PASIR RT.017 RW. 004, SEDAU, SINGKAWANG SELATAN, KOTA SINGKAWANG, KALIMANTAN",
+                "CV BESS": "JALAN SEJAHTERA N0.4 RT03/RW05, SAMBAS KALIMANTAN BARAT 79453"
+            }
+            opsi_dropdown = ["Pilih Template...", "PT MSAU", "PT EVARY", "CV BESS", "Ketik Manual (Lainnya)"]
+
             tab_inv1, tab_inv2, tab_inv3 = st.tabs([f"📄 {klien_1}", f"📄 {klien_2}", f"📄 {klien_3}"])
             data_untuk_massal = []
             
@@ -824,7 +831,6 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_1, klien_1, ket_1, hk_1, bk_1, sub_1, ppn_1, tot_1])
 
-                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
                     st.success(f"**💰 Rincian Biaya {klien_1}:**\n\n"
                             f"• Harga/Volume x Total Volume = **Rp {sub_1:,.0f}**\n\n"
                             f"• PPN (11%) = **Rp {ppn_1:,.0f}**\n\n"
@@ -862,7 +868,6 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_2, klien_2, ket_2, hk_2, bk_2, sub_2, ppn_2, tot_2])
 
-                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
                     st.success(f"**💰 Rincian Biaya {klien_2}:**\n\n"
                             f"• Harga/Volume x Total Volume = **Rp {sub_2:,.0f}**\n\n"
                             f"• PPN (11%) = **Rp {ppn_2:,.0f}**\n\n"
@@ -900,7 +905,6 @@ try:
                     
                     data_untuk_massal.append([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), no_inv_3, klien_3, ket_3, hk_3, bk_3, sub_3, ppn_3, tot_3])
 
-                    # MENGEMBALIKAN RINCIAN BIAYA SPESIFIK
                     st.success(f"**💰 Rincian Biaya {klien_3}:**\n\n"
                             f"• Harga/Volume x Total Volume = **Rp {sub_3:,.0f}**\n\n"
                             f"• PPN (11%) = **Rp {ppn_3:,.0f}**\n\n"
@@ -933,7 +937,7 @@ try:
                         st.session_state.invoice_base_count = 1 
                         st.success("Database di-reset!"); time.sleep(1.5); st.rerun()
 
-    # --- AUTO SAVE LOKAL ---
+    # --- AUTO SAVE INPUTS LOKAL SERVER ---
     current_state.update({k: v for k, v in st.session_state.items() if isinstance(v, (str, int, float, list))})
     try:
         with open(STATE_FILE_INPUTS, "w") as f: json.dump(current_state, f)
